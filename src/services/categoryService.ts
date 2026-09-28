@@ -15,14 +15,19 @@ import { DEFAULT_CATEGORIES } from './seedService';
 export async function getCategories(): Promise<Category[]> {
   try {
     const q = query(collection(db, 'categories'), orderBy('order', 'asc'));
-    const snap = await getDocs(q);
-    const categories: Category[] = [];
-    snap.forEach((d) => {
-      categories.push(d.data() as Category);
-    });
+    const fetchPromise = getDocs(q);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
 
-    if (categories.length > 0) {
-      return categories;
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (snap) {
+      const categories: Category[] = [];
+      snap.forEach((d: any) => {
+        categories.push(d.data() as Category);
+      });
+
+      if (categories.length > 0) {
+        return categories;
+      }
     }
   } catch (err: any) {
     console.warn('Note getting categories in offline mode, using defaults:', err?.message || err);

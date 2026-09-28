@@ -12,18 +12,26 @@ import {
 import { db } from './firebase';
 import { Announcement } from '../types';
 
+import { INITIAL_ANNOUNCEMENTS } from './defaultData';
+
 export async function getAnnouncements(): Promise<Announcement[]> {
   try {
     const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(q);
-    const announcements: Announcement[] = [];
-    snap.forEach((d) => {
-      announcements.push(d.data() as Announcement);
-    });
-    return announcements;
+    const fetchPromise = getDocs(q);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (snap) {
+      const announcements: Announcement[] = [];
+      snap.forEach((d: any) => {
+        announcements.push(d.data() as Announcement);
+      });
+      return announcements.length > 0 ? announcements : INITIAL_ANNOUNCEMENTS;
+    }
+    return INITIAL_ANNOUNCEMENTS;
   } catch (err) {
-    console.error('Error fetching announcements:', err);
-    return [];
+    console.warn('Error fetching announcements, using defaults:', err);
+    return INITIAL_ANNOUNCEMENTS;
   }
 }
 

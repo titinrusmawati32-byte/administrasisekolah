@@ -6,15 +6,13 @@ import { DEFAULT_SCHOOL_SETTINGS } from './seedService';
 export async function getSchoolSettings(): Promise<SchoolSettings> {
   try {
     const schoolRef = doc(db, 'settings', 'school');
-    const snap = await getDoc(schoolRef);
-    if (snap.exists()) {
+    const fetchPromise = getDoc(schoolRef);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 800));
+
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (snap && snap.exists()) {
       return snap.data() as SchoolSettings;
     } else {
-      try {
-        await setDoc(schoolRef, DEFAULT_SCHOOL_SETTINGS);
-      } catch (e) {
-        // ignore offline write error
-      }
       return DEFAULT_SCHOOL_SETTINGS;
     }
   } catch (err: any) {

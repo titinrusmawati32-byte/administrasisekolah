@@ -45,14 +45,20 @@ export async function getActivityLogs(maxRecords = 200): Promise<ActivityLog[]> 
       orderBy('timestamp', 'desc'),
       limit(maxRecords)
     );
-    const snap = await getDocs(q);
-    const logs: ActivityLog[] = [];
-    snap.forEach((doc) => {
-      logs.push(doc.data() as ActivityLog);
-    });
-    return logs;
+    const fetchPromise = getDocs(q);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (snap) {
+      const logs: ActivityLog[] = [];
+      snap.forEach((doc: any) => {
+        logs.push(doc.data() as ActivityLog);
+      });
+      return logs;
+    }
+    return [];
   } catch (err) {
-    console.error('Error getting activity logs:', err);
+    console.warn('Error getting activity logs, returning empty fallback:', err);
     return [];
   }
 }

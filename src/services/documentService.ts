@@ -144,18 +144,26 @@ export async function uploadDocument(
   return newDoc;
 }
 
+import { INITIAL_DOCUMENTS, INITIAL_DOWNLOADS } from './defaultData';
+
 export async function getAllDocuments(): Promise<SchoolDocument[]> {
   try {
     const q = query(collection(db, 'documents'), orderBy('uploadedAt', 'desc'));
-    const snap = await getDocs(q);
+    const fetchPromise = getDocs(q);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (!snap) {
+      return INITIAL_DOCUMENTS;
+    }
     const docs: SchoolDocument[] = [];
-    snap.forEach((d) => {
+    snap.forEach((d: any) => {
       docs.push(d.data() as SchoolDocument);
     });
-    return docs;
+    return docs.length > 0 ? docs : INITIAL_DOCUMENTS;
   } catch (err) {
-    console.error('Error fetching documents:', err);
-    return [];
+    console.warn('Note: getAllDocuments fallback used:', err);
+    return INITIAL_DOCUMENTS;
   }
 }
 
@@ -304,14 +312,22 @@ export async function getUserDownloadHistory(userId: string): Promise<DownloadRe
 export async function getAllDownloadRecords(): Promise<DownloadRecord[]> {
   try {
     const q = query(collection(db, 'downloads'));
-    const snap = await getDocs(q);
+    const fetchPromise = getDocs(q);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (!snap) {
+      return INITIAL_DOWNLOADS;
+    }
     const records: DownloadRecord[] = [];
-    snap.forEach((d) => {
+    snap.forEach((d: any) => {
       records.push(d.data() as DownloadRecord);
     });
-    return records.sort((a, b) => new Date(b.downloadedAt).getTime() - new Date(a.downloadedAt).getTime());
+    return records.length > 0
+      ? records.sort((a, b) => new Date(b.downloadedAt).getTime() - new Date(a.downloadedAt).getTime())
+      : INITIAL_DOWNLOADS;
   } catch (err) {
-    console.error('Error getting all download records:', err);
-    return [];
+    console.warn('Note: getAllDownloadRecords fallback used:', err);
+    return INITIAL_DOWNLOADS;
   }
 }

@@ -91,18 +91,28 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
   }
 }
 
+import { INITIAL_USERS } from './defaultData';
+
 export async function getAllUsers(): Promise<UserProfile[]> {
   try {
     const q = query(collection(db, 'users'));
-    const snap = await getDocs(q);
-    const users: UserProfile[] = [];
-    snap.forEach((doc) => {
-      users.push(doc.data() as UserProfile);
-    });
-    return users.sort((a, b) => a.name.localeCompare(b.name));
+    const fetchPromise = getDocs(q);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (snap) {
+      const users: UserProfile[] = [];
+      snap.forEach((doc: any) => {
+        users.push(doc.data() as UserProfile);
+      });
+      if (users.length > 0) {
+        return users.sort((a, b) => a.name.localeCompare(b.name));
+      }
+    }
+    return INITIAL_USERS;
   } catch (err) {
-    console.warn('Error fetching users:', err);
-    return [];
+    console.warn('Error fetching users, using defaults:', err);
+    return INITIAL_USERS;
   }
 }
 
