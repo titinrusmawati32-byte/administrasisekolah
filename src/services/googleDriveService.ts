@@ -18,6 +18,12 @@ export async function getOrCreateDriveFolder(
   folderName: string = DEFAULT_ROOT_FOLDER_NAME,
   accessToken: string
 ): Promise<string> {
+  const cacheKey = `gdrive_folder_${folderName}`;
+  const cachedId = sessionStorage.getItem(cacheKey);
+  if (cachedId) {
+    return cachedId;
+  }
+
   try {
     // Search for existing folder
     const query = `name = '${folderName}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
@@ -30,7 +36,9 @@ export async function getOrCreateDriveFolder(
     if (res.ok) {
       const data = await res.json();
       if (data.files && data.files.length > 0) {
-        return data.files[0].id;
+        const folderId = data.files[0].id;
+        sessionStorage.setItem(cacheKey, folderId);
+        return folderId;
       }
     }
 
@@ -55,6 +63,7 @@ export async function getOrCreateDriveFolder(
     }
 
     const folderData = await createRes.json();
+    sessionStorage.setItem(cacheKey, folderData.id);
     return folderData.id;
   } catch (err) {
     console.warn('Error in getOrCreateDriveFolder:', err);
@@ -75,22 +84,21 @@ export async function uploadFileToGoogleDrive(
     throw new Error('Google OAuth Access Token is required to upload to Google Drive.');
   }
 
-  if (onProgress) onProgress(10);
+  if (onProgress) onProgress(15);
 
-  // 1. Get root or category folder
+  // 1. Get root or category folder (cached for max speed)
   let parentFolderId: string | null = null;
   try {
-    const rootFolderId = await getOrCreateDriveFolder(DEFAULT_ROOT_FOLDER_NAME, accessToken);
     if (categoryFolder) {
       parentFolderId = await getOrCreateDriveFolder(`${categoryFolder}`, accessToken);
     } else {
-      parentFolderId = rootFolderId;
+      parentFolderId = await getOrCreateDriveFolder(DEFAULT_ROOT_FOLDER_NAME, accessToken);
     }
   } catch (err) {
     console.warn('Could not set parent folder, uploading to Drive root:', err);
   }
 
-  if (onProgress) onProgress(30);
+  if (onProgress) onProgress(40);
 
   // 2. Prepare Multipart Upload Body
   const metadata = {
@@ -105,15 +113,25 @@ export async function uploadFileToGoogleDrive(
 
   const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink';
 
-  const uploadRes = await fetch(uploadUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    },
-    body: form
-  });
+  // 10-second timeout for Drive upload API call
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-  if (onProgress) onProgress(80);
+  let uploadRes: Response;
+  try {
+    uploadRes = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: form,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (onProgress) onProgress(85);
 
   if (!uploadRes.ok) {
     const errText = await uploadRes.text();
@@ -123,27 +141,20 @@ export async function uploadFileToGoogleDrive(
   const fileData = await uploadRes.json();
   const fileId = fileData.id;
 
-  // 3. Make file readable by anyone with link (so teachers can view/download)
-  try {
-    const permissionUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`;
-    await fetch(permissionUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        role: 'reader',
-        type: 'anyone'
-      })
-    });
-  } catch (permErr) {
+  // 3. Set background permissions without blocking return
+  fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ role: 'reader', type: 'anyone' })
+  }).catch((permErr) => {
     console.warn('Permission set warning:', permErr);
-  }
+  });
 
   if (onProgress) onProgress(100);
 
-  // Construct direct download & preview URLs
   const webViewLink = fileData.webViewLink || `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
   const webContentLink = fileData.webContentLink || `https://drive.google.com/uc?id=${fileId}&export=download`;
 

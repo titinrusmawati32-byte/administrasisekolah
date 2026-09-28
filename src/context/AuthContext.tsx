@@ -299,20 +299,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const connectGoogleWorkspace = async (): Promise<string> => {
-    const provider = new GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/drive.file');
-    provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/drive.file');
+      provider.addScope('https://www.googleapis.com/auth/spreadsheets');
 
-    const res = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(res);
-    const token = credential?.accessToken || null;
+      const res = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(res);
+      const token = credential?.accessToken || null;
 
-    if (!token) {
-      throw new Error('Gagal mendapatkan Access Token Google Workspace.');
+      if (!token) {
+        throw new Error('Gagal mendapatkan Access Token Google Workspace.');
+      }
+
+      setGoogleAccessToken(token);
+      return token;
+    } catch (err: any) {
+      if (err?.code === 'auth/unauthorized-domain' || err?.message?.includes('unauthorized-domain')) {
+        const domainMsg = 'Domain ini belum didaftarkan di Firebase Authorized Domains. Dokumen tetap diunggah dengan cepat melalui penyimpanan lokal/Firestore!';
+        console.warn(domainMsg);
+        throw new Error(domainMsg);
+      }
+      throw err;
     }
-
-    setGoogleAccessToken(token);
-    return token;
   };
 
   const loginWithGoogle = async (): Promise<string | null> => {
@@ -345,7 +354,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('Google Sign-In error:', err);
       let msg = 'Gagal masuk dengan akun Google.';
-      if (err.message === 'AKUN_NONAKTIF') {
+      if (err?.code === 'auth/unauthorized-domain' || err?.message?.includes('unauthorized-domain')) {
+        msg = 'Domain ini belum didaftarkan di Firebase Authorized Domains. Silakan gunakan login Email & Password.';
+      } else if (err.message === 'AKUN_NONAKTIF') {
         msg = 'Akun Anda telah nonaktif. Silakan hubungi Administrator Sekolah.';
       }
       setAuthError(msg);

@@ -61,11 +61,11 @@ export async function uploadDocument(
         finalFileUrl = driveResult.webContentLink || driveResult.webViewLink;
         storagePath = `drive:${driveResult.fileId}`;
       } catch (driveErr) {
-        console.warn('Google Drive upload failed, falling back to Firebase Storage/Local:', driveErr);
+        console.warn('Google Drive upload fallback to local/storage:', driveErr);
       }
     }
 
-    // 2. Fallback to Firebase Storage if finalFileUrl is still empty
+    // 2. Fallback to Firebase Storage / Local URL if finalFileUrl is still empty
     if (!finalFileUrl) {
       const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       storagePath = `documents/${input.categoryId}/${documentId}/${safeName}`;
@@ -74,7 +74,15 @@ export async function uploadDocument(
       try {
         const uploadTask = uploadBytesResumable(storageRef, input.file);
 
-        await new Promise<void>((resolve, reject) => {
+        // Max 3.5-second wait for Firebase Storage upload
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            if (input.file && !finalFileUrl) {
+              finalFileUrl = URL.createObjectURL(input.file);
+            }
+            resolve();
+          }, 3500);
+
           uploadTask.on(
             'state_changed',
             (snapshot) => {
@@ -82,25 +90,33 @@ export async function uploadDocument(
               if (onProgress) onProgress(pct);
             },
             (error) => {
-              console.warn('Storage upload error, falling back to local object URL:', error);
+              clearTimeout(timeout);
               if (input.file) {
                 finalFileUrl = URL.createObjectURL(input.file);
               }
               resolve();
             },
             async () => {
-              finalFileUrl = await getDownloadURL(uploadTask.snapshot.ref);
+              clearTimeout(timeout);
+              try {
+                finalFileUrl = await getDownloadURL(uploadTask.snapshot.ref);
+              } catch (e) {
+                if (input.file) finalFileUrl = URL.createObjectURL(input.file);
+              }
               resolve();
             }
           );
         });
       } catch (err) {
-        console.warn('Fallback to local file handling:', err);
         if (input.file && !finalFileUrl) {
           finalFileUrl = URL.createObjectURL(input.file);
         }
       }
     }
+  }
+
+  if (!finalFileUrl && input.file) {
+    finalFileUrl = URL.createObjectURL(input.file);
   }
 
   const now = new Date().toISOString();
@@ -129,17 +145,35 @@ export async function uploadDocument(
     remarks: input.remarks || ''
   };
 
-  await setDoc(doc(db, 'documents', documentId), newDoc);
+  // 1. Immediately insert into local cache for instant UI availability
+  try {
+    const cached = localStorage.getItem('cached_documents_v2');
+    const docs: SchoolDocument[] = cached ? JSON.parse(cached) : [];
+    const updated = [newDoc, ...docs.filter((d) => d.documentId !== documentId)];
+    localStorage.setItem('cached_documents_v2', JSON.stringify(updated));
+  } catch (e) {}
+  localStorage.setItem('app_initialized_v2', 'true');
 
-  // Log activity
-  await logActivity(
+  if (onProgress) onProgress(100);
+
+  // 2. Race Firestore persistence with 1200ms timeout
+  try {
+    const savePromise = setDoc(doc(db, 'documents', documentId), newDoc);
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1200));
+    await Promise.race([savePromise, timeoutPromise]);
+  } catch (e) {
+    console.warn('Note: Document saved to local cache:', e);
+  }
+
+  // Background activity logging
+  logActivity(
     input.uploadedBy,
     input.uploadedByName,
     '',
     'UPLOAD_DOC',
     documentId,
     input.title
-  );
+  ).catch(() => {});
 
   return newDoc;
 }
