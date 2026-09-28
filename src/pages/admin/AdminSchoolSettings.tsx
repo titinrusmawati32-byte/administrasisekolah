@@ -89,6 +89,11 @@ export const AdminSchoolSettings: React.FC = () => {
           message: 'Sinkronisasi dibatalkan karena jendela login Google ditutup. Silakan klik tombol lagi dan selesaikan login Google.',
           type: 'info'
         });
+      } else if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain')) {
+        setToast({
+          message: 'Domain ini belum diizinkan oleh Firebase OAuth. Silakan gunakan tombol "Unduh Backup CSV" untuk mengunduh seluruh data database Excel/CSV secara instan.',
+          type: 'error'
+        });
       } else {
         setToast({
           message: err.message || 'Gagal mensinkronkan data ke Google Sheets.',
