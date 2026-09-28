@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
 import { SchoolSettings } from '../types';
+import { INITIAL_DOCUMENTS, INITIAL_USERS, INITIAL_ANNOUNCEMENTS, INITIAL_DOWNLOADS } from './defaultData';
 
 export const DEFAULT_CATEGORIES = [
   { id: 'cat-1', name: 'Administrasi Sekolah', icon: 'Building2', description: 'Dokumen tata kelola, visi-misi, dan manajemen sekolah', order: 1 },
@@ -57,6 +58,37 @@ export async function initializeSchoolData(): Promise<void> {
         });
       }
       await batch.commit();
+    }
+
+    // 3. Check & Seed Initial Documents, Users, Announcements ONCE if never initialized before
+    const initDocRef = doc(db, 'settings', 'init_status');
+    const initSnap = await getDoc(initDocRef);
+    if (!initSnap.exists()) {
+      const docSnap = await getDocs(collection(db, 'documents'));
+      if (docSnap.empty) {
+        const batch = writeBatch(db);
+        for (const d of INITIAL_DOCUMENTS) {
+          const dRef = doc(db, 'documents', d.documentId);
+          batch.set(dRef, d);
+        }
+        for (const u of INITIAL_USERS) {
+          const uRef = doc(db, 'users', u.uid);
+          batch.set(uRef, u);
+        }
+        for (const a of INITIAL_ANNOUNCEMENTS) {
+          const aRef = doc(db, 'announcements', a.announcementId);
+          batch.set(aRef, a);
+        }
+        for (const dl of INITIAL_DOWNLOADS) {
+          const dlRef = doc(db, 'downloads', dl.downloadId);
+          batch.set(dlRef, dl);
+        }
+        batch.set(initDocRef, { initializedAt: new Date().toISOString(), version: 2 });
+        await batch.commit();
+      } else {
+        await setDoc(initDocRef, { initializedAt: new Date().toISOString(), version: 2 });
+      }
+      localStorage.setItem('app_initialized_v2', 'true');
     }
   } catch (err: any) {
     console.warn('Note: School data seed check handled offline/pending network state:', err?.message || err);

@@ -150,45 +150,40 @@ export async function getAllDocuments(): Promise<SchoolDocument[]> {
   try {
     const q = query(collection(db, 'documents'), orderBy('uploadedAt', 'desc'));
     const fetchPromise = getDocs(q);
-    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200));
 
     const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
     if (!snap) {
-      return INITIAL_DOCUMENTS;
+      const cached = localStorage.getItem('cached_documents_v2');
+      if (cached !== null) {
+        return JSON.parse(cached);
+      }
+      return localStorage.getItem('app_initialized_v2') ? [] : INITIAL_DOCUMENTS;
     }
     const docs: SchoolDocument[] = [];
     snap.forEach((d: any) => {
       docs.push(d.data() as SchoolDocument);
     });
-    return docs.length > 0 ? docs : INITIAL_DOCUMENTS;
+    
+    localStorage.setItem('cached_documents_v2', JSON.stringify(docs));
+    localStorage.setItem('app_initialized_v2', 'true');
+    return docs;
   } catch (err) {
     console.warn('Note: getAllDocuments fallback used:', err);
-    return INITIAL_DOCUMENTS;
+    const cached = localStorage.getItem('cached_documents_v2');
+    if (cached !== null) {
+      return JSON.parse(cached);
+    }
+    return localStorage.getItem('app_initialized_v2') ? [] : INITIAL_DOCUMENTS;
   }
 }
 
 export async function getPublishedDocuments(): Promise<SchoolDocument[]> {
   try {
-    const q = query(
-      collection(db, 'documents'),
-      where('status', '==', 'Published')
-    );
-    const fetchPromise = getDocs(q);
-    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
-
-    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
-    if (!snap) {
-      return INITIAL_DOCUMENTS.filter((d) => d.status === 'Published');
-    }
-    const docs: SchoolDocument[] = [];
-    snap.forEach((d: any) => {
-      docs.push(d.data() as SchoolDocument);
-    });
-    const published = docs.filter((d) => d.status === 'Published');
-    return published.length > 0 ? published : INITIAL_DOCUMENTS.filter((d) => d.status === 'Published');
-  } catch (err) {
     const all = await getAllDocuments();
     return all.filter((d) => d.status === 'Published');
+  } catch (err) {
+    return [];
   }
 }
 
@@ -233,7 +228,20 @@ export async function deleteDocumentRecord(
   deletedByUserId: string,
   deletedByUserName: string
 ): Promise<void> {
-  // Fire-and-forget storage cleanup and activity logging in background
+  // 1. Immediately update local storage cache so refresh/offline reflects deletion
+  const cached = localStorage.getItem('cached_documents_v2');
+  if (cached) {
+    try {
+      const docs: SchoolDocument[] = JSON.parse(cached);
+      const updated = docs.filter((d) => d.documentId !== documentId);
+      localStorage.setItem('cached_documents_v2', JSON.stringify(updated));
+    } catch (e) {
+      // ignore
+    }
+  }
+  localStorage.setItem('app_initialized_v2', 'true');
+
+  // 2. Fire-and-forget storage cleanup and activity logging in background
   getDocumentById(documentId).then((docData) => {
     if (docData && docData.storagePath) {
       try {
@@ -253,10 +261,10 @@ export async function deleteDocumentRecord(
     ).catch(() => {});
   }).catch(() => {});
 
-  // Race Firestore deletion with 800ms timeout
+  // 3. Race Firestore deletion with 1200ms timeout
   try {
     const deletePromise = deleteDoc(doc(db, 'documents', documentId));
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 800));
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1200));
     await Promise.race([deletePromise, timeoutPromise]);
   } catch (err) {
     console.warn('Note: Document deleted locally:', err);

@@ -51,13 +51,13 @@ export const GuruDashboard: React.FC = () => {
         getCategories(),
         getActiveAnnouncements()
       ]);
-      if (docData.length > 0) setDocuments(docData);
-      if (catData.length > 0) setCategories(catData);
-      if (annData.length > 0) setAnnouncements(annData);
+      setDocuments(docData);
+      setCategories(catData);
+      setAnnouncements(annData);
 
       if (currentUser) {
         const dlHistory = await getUserDownloadHistory(currentUser.uid);
-        if (dlHistory.length > 0) setMyDownloads(dlHistory);
+        setMyDownloads(dlHistory);
       }
     } catch (err) {
       console.warn('Error loading teacher dashboard (using initial data):', err);

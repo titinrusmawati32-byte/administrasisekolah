@@ -44,8 +44,8 @@ export const GuruDocumentList: React.FC = () => {
         getPublishedDocuments(),
         getCategories()
       ]);
-      if (docData.length > 0) setDocuments(docData);
-      if (catData.length > 0) setCategories(catData);
+      setDocuments(docData);
+      setCategories(catData);
     } catch (err) {
       console.warn('Error loading documents for teacher:', err);
     } finally {
