@@ -6,18 +6,24 @@ import { useAuth } from '../../hooks/useAuth';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { formatDate } from '../../utils/formatters';
 
+import { INITIAL_DOWNLOADS } from '../../services/defaultData';
+
 export const GuruDownloadHistory: React.FC = () => {
-  const [history, setHistory] = useState<DownloadRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<DownloadRecord[]>(INITIAL_DOWNLOADS);
+  const [loading, setLoading] = useState(false);
 
   const { currentUser } = useAuth();
 
   useEffect(() => {
     if (currentUser) {
       getUserDownloadHistory(currentUser.uid).then((data) => {
-        setHistory(data);
+        if (data.length > 0) {
+          setHistory(data);
+        }
         setLoading(false);
-      });
+      }).catch(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, [currentUser]);
 

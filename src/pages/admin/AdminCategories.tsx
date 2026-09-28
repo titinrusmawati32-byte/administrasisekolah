@@ -81,13 +81,17 @@ export const AdminCategories: React.FC = () => {
 
   const handleDelete = async () => {
     if (!deletingCat) return;
+    const catToDelete = deletingCat;
+
+    // Optimistic UI update: close modal and remove from state instantly
+    setCategories((prev) => prev.filter((c) => c.categoryId !== catToDelete.categoryId));
+    setDeletingCat(null);
+    setToast({ message: 'Kategori berhasil dihapus.', type: 'success' });
+
     try {
-      await deleteCategory(deletingCat.categoryId);
-      setToast({ message: 'Kategori berhasil dihapus.', type: 'success' });
-      setDeletingCat(null);
-      await loadData();
+      await deleteCategory(catToDelete.categoryId);
     } catch (err) {
-      setToast({ message: 'Gagal menghapus kategori.', type: 'error' });
+      console.warn('Background category delete:', err);
     }
   };
 

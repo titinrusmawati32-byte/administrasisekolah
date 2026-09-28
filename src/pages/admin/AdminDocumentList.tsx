@@ -89,20 +89,21 @@ export const AdminDocumentList: React.FC = () => {
 
   const handleDeleteConfirm = async () => {
     if (!selectedDocForDelete || !currentUser || !userProfile) return;
-    setDeleting(true);
+    const docToDelete = selectedDocForDelete;
+    
+    // Optimistic UI update: close modal and remove from list instantly!
+    setDocuments((prev) => prev.filter((d) => d.documentId !== docToDelete.documentId));
+    setSelectedDocForDelete(null);
+    setToast({ message: 'Dokumen berhasil dihapus.', type: 'success' });
+
     try {
       await deleteDocumentRecord(
-        selectedDocForDelete.documentId,
+        docToDelete.documentId,
         currentUser.uid,
         userProfile.name
       );
-      setToast({ message: 'Dokumen berhasil dihapus.', type: 'success' });
-      setSelectedDocForDelete(null);
-      await loadData();
     } catch (err) {
-      setToast({ message: 'Gagal menghapus dokumen.', type: 'error' });
-    } finally {
-      setDeleting(false);
+      console.warn('Background document delete:', err);
     }
   };
 

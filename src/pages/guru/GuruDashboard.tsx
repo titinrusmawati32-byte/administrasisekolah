@@ -29,12 +29,14 @@ import { DocumentPreview } from '../../components/common/DocumentPreview';
 import { Toast, ToastType } from '../../components/common/Toast';
 import { formatDate } from '../../utils/formatters';
 
+import { INITIAL_DOCUMENTS, INITIAL_CATEGORIES, INITIAL_ANNOUNCEMENTS, INITIAL_DOWNLOADS } from '../../services/defaultData';
+
 export const GuruDashboard: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [documents, setDocuments] = useState<SchoolDocument[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [myDownloads, setMyDownloads] = useState<DownloadRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [documents, setDocuments] = useState<SchoolDocument[]>(INITIAL_DOCUMENTS.filter((d) => d.status === 'Published'));
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
+  const [myDownloads, setMyDownloads] = useState<DownloadRecord[]>(INITIAL_DOWNLOADS);
 
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<SchoolDocument | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -43,23 +45,22 @@ export const GuruDashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const [docData, catData, annData] = await Promise.all([
         getPublishedDocuments(),
         getCategories(),
         getActiveAnnouncements()
       ]);
-      setDocuments(docData);
-      setCategories(catData);
-      setAnnouncements(annData);
+      if (docData.length > 0) setDocuments(docData);
+      if (catData.length > 0) setCategories(catData);
+      if (annData.length > 0) setAnnouncements(annData);
 
       if (currentUser) {
         const dlHistory = await getUserDownloadHistory(currentUser.uid);
-        setMyDownloads(dlHistory);
+        if (dlHistory.length > 0) setMyDownloads(dlHistory);
       }
     } catch (err) {
-      console.error('Error loading teacher dashboard:', err);
+      console.warn('Error loading teacher dashboard (using initial data):', err);
     } finally {
       setLoading(false);
     }

@@ -14,13 +14,15 @@ import { DocumentPreview } from '../../components/common/DocumentPreview';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Toast, ToastType } from '../../components/common/Toast';
 
+import { INITIAL_DOCUMENTS, INITIAL_CATEGORIES } from '../../services/defaultData';
+
 export const GuruDocumentList: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialCatId = searchParams.get('category') || '';
 
-  const [loading, setLoading] = useState(true);
-  const [documents, setDocuments] = useState<SchoolDocument[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [documents, setDocuments] = useState<SchoolDocument[]>(INITIAL_DOCUMENTS.filter((d) => d.status === 'Published'));
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -37,16 +39,15 @@ export const GuruDocumentList: React.FC = () => {
   const { currentUser, userProfile } = useAuth();
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const [docData, catData] = await Promise.all([
         getPublishedDocuments(),
         getCategories()
       ]);
-      setDocuments(docData);
-      setCategories(catData);
+      if (docData.length > 0) setDocuments(docData);
+      if (catData.length > 0) setCategories(catData);
     } catch (err) {
-      console.error('Error loading documents for teacher:', err);
+      console.warn('Error loading documents for teacher:', err);
     } finally {
       setLoading(false);
     }

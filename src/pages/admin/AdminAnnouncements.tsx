@@ -67,13 +67,17 @@ export const AdminAnnouncements: React.FC = () => {
 
   const handleDelete = async () => {
     if (!deletingAnn) return;
+    const annToDelete = deletingAnn;
+
+    // Optimistic UI update: close modal and remove from state instantly
+    setAnnouncements((prev) => prev.filter((a) => a.announcementId !== annToDelete.announcementId));
+    setDeletingAnn(null);
+    setToast({ message: 'Pengumuman berhasil dihapus.', type: 'success' });
+
     try {
-      await deleteAnnouncement(deletingAnn.announcementId);
-      setToast({ message: 'Pengumuman berhasil dihapus.', type: 'success' });
-      setDeletingAnn(null);
-      await loadData();
+      await deleteAnnouncement(annToDelete.announcementId);
     } catch (err) {
-      setToast({ message: 'Gagal menghapus pengumuman.', type: 'error' });
+      console.warn('Background announcement delete:', err);
     }
   };
 

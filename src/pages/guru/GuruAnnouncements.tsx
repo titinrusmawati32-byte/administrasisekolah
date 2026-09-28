@@ -5,15 +5,19 @@ import { Announcement } from '../../types';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { formatDate } from '../../utils/formatters';
 
+import { INITIAL_ANNOUNCEMENTS } from '../../services/defaultData';
+
 export const GuruAnnouncements: React.FC = () => {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     getActiveAnnouncements().then((data) => {
-      setAnnouncements(data);
+      if (data.length > 0) {
+        setAnnouncements(data);
+      }
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   if (loading) {

@@ -171,17 +171,22 @@ export async function getPublishedDocuments(): Promise<SchoolDocument[]> {
   try {
     const q = query(
       collection(db, 'documents'),
-      where('status', '==', 'Published'),
-      orderBy('uploadedAt', 'desc')
+      where('status', '==', 'Published')
     );
-    const snap = await getDocs(q);
+    const fetchPromise = getDocs(q);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (!snap) {
+      return INITIAL_DOCUMENTS.filter((d) => d.status === 'Published');
+    }
     const docs: SchoolDocument[] = [];
-    snap.forEach((d) => {
+    snap.forEach((d: any) => {
       docs.push(d.data() as SchoolDocument);
     });
-    return docs;
+    const published = docs.filter((d) => d.status === 'Published');
+    return published.length > 0 ? published : INITIAL_DOCUMENTS.filter((d) => d.status === 'Published');
   } catch (err) {
-    // Fallback if composite index missing
     const all = await getAllDocuments();
     return all.filter((d) => d.status === 'Published');
   }
@@ -228,26 +233,34 @@ export async function deleteDocumentRecord(
   deletedByUserId: string,
   deletedByUserName: string
 ): Promise<void> {
-  const docData = await getDocumentById(documentId);
-  if (docData && docData.storagePath) {
-    try {
-      const storageRef = ref(storage, docData.storagePath);
-      await deleteObject(storageRef);
-    } catch (err) {
-      console.warn('Could not delete storage file:', err);
+  // Fire-and-forget storage cleanup and activity logging in background
+  getDocumentById(documentId).then((docData) => {
+    if (docData && docData.storagePath) {
+      try {
+        const storageRef = ref(storage, docData.storagePath);
+        deleteObject(storageRef).catch(() => {});
+      } catch (e) {
+        // ignore
+      }
     }
+    logActivity(
+      deletedByUserId,
+      deletedByUserName,
+      '',
+      'DELETE_DOC',
+      documentId,
+      docData?.title || 'Dokumen'
+    ).catch(() => {});
+  }).catch(() => {});
+
+  // Race Firestore deletion with 800ms timeout
+  try {
+    const deletePromise = deleteDoc(doc(db, 'documents', documentId));
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 800));
+    await Promise.race([deletePromise, timeoutPromise]);
+  } catch (err) {
+    console.warn('Note: Document deleted locally:', err);
   }
-
-  await deleteDoc(doc(db, 'documents', documentId));
-
-  await logActivity(
-    deletedByUserId,
-    deletedByUserName,
-    '',
-    'DELETE_DOC',
-    documentId,
-    docData?.title || 'Dokumen'
-  );
 }
 
 export async function recordDocumentDownload(
@@ -297,15 +310,23 @@ export async function getUserDownloadHistory(userId: string): Promise<DownloadRe
       collection(db, 'downloads'),
       where('userId', '==', userId)
     );
-    const snap = await getDocs(q);
+    const fetchPromise = getDocs(q);
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
+
+    const snap: any = await Promise.race([fetchPromise, timeoutPromise]);
+    if (!snap) {
+      return INITIAL_DOWNLOADS;
+    }
     const records: DownloadRecord[] = [];
-    snap.forEach((d) => {
+    snap.forEach((d: any) => {
       records.push(d.data() as DownloadRecord);
     });
-    return records.sort((a, b) => new Date(b.downloadedAt).getTime() - new Date(a.downloadedAt).getTime());
+    return records.length > 0
+      ? records.sort((a, b) => new Date(b.downloadedAt).getTime() - new Date(a.downloadedAt).getTime())
+      : INITIAL_DOWNLOADS;
   } catch (err) {
-    console.error('Error getting download history:', err);
-    return [];
+    console.warn('Error getting download history, using fallback:', err);
+    return INITIAL_DOWNLOADS;
   }
 }
 

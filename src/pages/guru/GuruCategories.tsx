@@ -6,23 +6,33 @@ import { getPublishedDocuments } from '../../services/documentService';
 import { Category } from '../../types';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 
+import { INITIAL_CATEGORIES, INITIAL_DOCUMENTS } from '../../services/defaultData';
+
 export const GuruCategories: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [docCounts, setDocCounts] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [docCounts, setDocCounts] = useState<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    INITIAL_DOCUMENTS.forEach((d) => {
+      counts[d.categoryId] = (counts[d.categoryId] || 0) + 1;
+    });
+    return counts;
+  });
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
   useEffect(() => {
     Promise.all([getCategories(), getPublishedDocuments()]).then(([cats, docs]) => {
-      const counts: Record<string, number> = {};
-      docs.forEach((d) => {
-        counts[d.categoryId] = (counts[d.categoryId] || 0) + 1;
-      });
-      setCategories(cats);
-      setDocCounts(counts);
+      if (cats.length > 0) {
+        const counts: Record<string, number> = {};
+        docs.forEach((d) => {
+          counts[d.categoryId] = (counts[d.categoryId] || 0) + 1;
+        });
+        setCategories(cats);
+        setDocCounts(counts);
+      }
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   if (loading) {
