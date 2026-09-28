@@ -49,32 +49,54 @@ export const GuruDownloadHistory: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Waktu Unduh</th>
-                  <th className="py-3 px-4">Judul Dokumen</th>
-                  <th className="py-3 px-4">Nama File</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
-                {history.map((item) => (
-                  <tr key={item.downloadId} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4 text-slate-500 whitespace-nowrap text-[11px]">
-                      {new Date(item.downloadedAt).toLocaleString('id-ID')}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-slate-800">
-                      {item.documentTitle}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
-                      {item.fileName}
-                    </td>
+        <div className="space-y-3">
+          {/* Mobile Card List (< 768px) */}
+          <div className="block md:hidden space-y-2.5">
+            {history.map((item) => (
+              <div
+                key={item.downloadId}
+                className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-2"
+              >
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>{new Date(item.downloadedAt).toLocaleString('id-ID')}</span>
+                  <span className="font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Terunduh</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 text-xs sm:text-sm">{item.documentTitle}</h4>
+                  <p className="text-[11px] text-slate-400 truncate mt-0.5">{item.fileName}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop/Tablet Table (>= 768px) */}
+          <div className="hidden md:block bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Waktu Unduh</th>
+                    <th className="py-3 px-4">Judul Dokumen</th>
+                    <th className="py-3 px-4">Nama File</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                  {history.map((item) => (
+                    <tr key={item.downloadId} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4 text-slate-500 whitespace-nowrap text-[11px]">
+                        {new Date(item.downloadedAt).toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-slate-800">
+                        {item.documentTitle}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
+                        {item.fileName}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

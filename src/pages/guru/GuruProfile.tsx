@@ -178,7 +178,7 @@ export const GuruProfile: React.FC = () => {
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors"
+              className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
             >
               {saving ? 'Memperbarui...' : 'Simpan Profil Guru'}
             </button>
@@ -228,7 +228,7 @@ export const GuruProfile: React.FC = () => {
             <button
               type="submit"
               disabled={updatingPass}
-              className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-md transition-colors"
+              className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 text-white font-bold text-xs rounded-xl shadow-md transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
             >
               {updatingPass ? 'Mengubah Password...' : 'Ubah Password'}
             </button>

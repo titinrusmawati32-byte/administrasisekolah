@@ -97,7 +97,7 @@ export const AdminCategories: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Manajemen Kategori Dokumen</h1>
           <p className="text-xs text-slate-500 mt-1">
@@ -106,8 +106,9 @@ export const AdminCategories: React.FC = () => {
         </div>
 
         <button
+          type="button"
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors shrink-0"
+          className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Tambah Kategori
@@ -121,7 +122,7 @@ export const AdminCategories: React.FC = () => {
           {categories.map((cat) => (
             <div
               key={cat.categoryId}
-              className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
+              className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -143,15 +144,17 @@ export const AdminCategories: React.FC = () => {
 
               <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
+                  type="button"
                   onClick={() => handleOpenEdit(cat)}
-                  className="px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1"
+                  className="min-h-[38px] px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 font-semibold text-xs rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   Edit
                 </button>
                 <button
+                  type="button"
                   onClick={() => setDeletingCat(cat)}
-                  className="px-3 py-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1"
+                  className="min-h-[38px] px-3 py-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 font-semibold text-xs rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Hapus
@@ -201,13 +204,13 @@ export const AdminCategories: React.FC = () => {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors"
+              className="min-h-[44px] px-5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors"
+              className="min-h-[44px] px-6 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center"
             >
               Simpan
             </button>

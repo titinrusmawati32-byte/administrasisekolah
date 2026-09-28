@@ -180,12 +180,12 @@ export const AdminSchoolSettings: React.FC = () => {
           </div>
         </div>
 
-        <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-3">
+        <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={handleSyncToGoogleSheets}
             disabled={syncingSheets}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-50"
+            className="min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-50 cursor-pointer"
           >
             {syncingSheets ? (
               <>
@@ -203,7 +203,7 @@ export const AdminSchoolSettings: React.FC = () => {
           <button
             type="button"
             onClick={handleExportCSVFallback}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs rounded-xl border border-white/15 transition-colors"
+            className="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white font-semibold text-xs rounded-xl border border-white/15 transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Unduh Backup CSV</span>
@@ -214,7 +214,7 @@ export const AdminSchoolSettings: React.FC = () => {
               href={sheetUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white font-bold text-xs rounded-xl border border-white/20 transition-colors"
+              className="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/15 hover:bg-white/25 active:bg-white/30 text-white font-bold text-xs rounded-xl border border-white/20 transition-colors"
             >
               <span>Buka Google Sheet</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -418,7 +418,7 @@ export const AdminSchoolSettings: React.FC = () => {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors disabled:opacity-50"
+            className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors disabled:opacity-50 cursor-pointer"
           >
             <Save className="w-4 h-4" />
             {saving ? 'Menyimpan...' : 'Simpan Pengaturan'}

@@ -92,8 +92,9 @@ export const AdminAnnouncements: React.FC = () => {
         </div>
 
         <button
+          type="button"
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors shrink-0"
+          className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Buat Pengumuman Baru
@@ -107,23 +108,23 @@ export const AdminAnnouncements: React.FC = () => {
           {announcements.map((ann) => (
             <div
               key={ann.announcementId}
-              className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs space-y-3"
+              className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs space-y-3"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl shrink-0">
                     <Megaphone className="w-5 h-5" />
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-800">{ann.title}</h3>
-                    <p className="text-[11px] text-slate-400">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-slate-800 truncate">{ann.title}</h3>
+                    <p className="text-[11px] text-slate-400 truncate">
                       Oleh {ann.createdByName} • {formatDate(ann.createdAt)}
                     </p>
                   </div>
                 </div>
 
                 <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
                     ann.status === 'active'
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : 'bg-slate-100 text-slate-600 border-slate-200'
@@ -139,15 +140,17 @@ export const AdminAnnouncements: React.FC = () => {
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
+                  type="button"
                   onClick={() => handleToggleStatus(ann)}
-                  className="px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1"
+                  className="min-h-[38px] px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 font-semibold text-xs rounded-xl transition-colors inline-flex items-center gap-1 cursor-pointer"
                 >
                   <Archive className="w-3.5 h-3.5" />
                   {ann.status === 'active' ? 'Arsipkan' : 'Aktifkan'}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setDeletingAnn(ann)}
-                  className="px-3 py-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1"
+                  className="min-h-[38px] px-3 py-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 font-semibold text-xs rounded-xl transition-colors inline-flex items-center gap-1 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Hapus
@@ -198,13 +201,13 @@ export const AdminAnnouncements: React.FC = () => {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl"
+              className="min-h-[44px] px-5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md"
+              className="min-h-[44px] px-6 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center"
             >
               Publikasikan
             </button>

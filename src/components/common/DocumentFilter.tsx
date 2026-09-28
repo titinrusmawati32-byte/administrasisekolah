@@ -58,14 +58,14 @@ export const DocumentFilter: React.FC<DocumentFilterProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-3">
         {/* Category */}
         <div>
           <label className="block text-[11px] font-semibold text-slate-500 mb-1">Kategori</label>
           <select
             value={filters.categoryId}
             onChange={(e) => onChange({ ...filters, categoryId: e.target.value })}
-            className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 focus:bg-white"
+            className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 min-h-[40px] focus:ring-1 focus:ring-blue-500 focus:bg-white"
           >
             <option value="">Semua Kategori</option>
             {categories.map((c) => (
@@ -82,7 +82,7 @@ export const DocumentFilter: React.FC<DocumentFilterProps> = ({
           <select
             value={filters.year}
             onChange={(e) => onChange({ ...filters, year: e.target.value })}
-            className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 focus:bg-white"
+            className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 min-h-[40px] focus:ring-1 focus:ring-blue-500 focus:bg-white"
           >
             <option value="">Semua Tahun</option>
             {yearOptions.map((y) => (
@@ -99,7 +99,7 @@ export const DocumentFilter: React.FC<DocumentFilterProps> = ({
           <select
             value={filters.semester}
             onChange={(e) => onChange({ ...filters, semester: e.target.value })}
-            className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 focus:bg-white"
+            className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 min-h-[40px] focus:ring-1 focus:ring-blue-500 focus:bg-white"
           >
             <option value="">Semua Semester</option>
             <option value="1">Semester 1 (Ganjil)</option>
@@ -115,7 +115,7 @@ export const DocumentFilter: React.FC<DocumentFilterProps> = ({
           <select
             value={filters.fileType}
             onChange={(e) => onChange({ ...filters, fileType: e.target.value })}
-            className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 focus:bg-white"
+            className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 min-h-[40px] focus:ring-1 focus:ring-blue-500 focus:bg-white"
           >
             <option value="">Semua Format</option>
             <option value="pdf">PDF</option>
@@ -134,7 +134,7 @@ export const DocumentFilter: React.FC<DocumentFilterProps> = ({
             <select
               value={filters.status || ''}
               onChange={(e) => onChange({ ...filters, status: e.target.value })}
-              className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 focus:bg-white"
+              className="w-full text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-2.5 min-h-[40px] focus:ring-1 focus:ring-blue-500 focus:bg-white"
             >
               <option value="">Semua Status</option>
               <option value="Published">Published</option>

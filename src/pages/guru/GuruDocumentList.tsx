@@ -118,18 +118,20 @@ export const GuruDocumentList: React.FC = () => {
       </div>
 
       {/* Controls Bar */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Cari kata kunci: contoh 'Modul Ajar Matematika', 'Prota', 'KTSP'..."
-        />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex-1">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Cari kata kunci: contoh 'Modul Ajar Matematika', 'Prota', 'KTSP'..."
+          />
+        </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+        <div className="flex items-center justify-end gap-2 shrink-0">
           <span className="text-xs font-semibold text-slate-500 mr-1">Tampilan:</span>
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors min-h-[40px] cursor-pointer ${
               viewMode === 'grid'
                 ? 'bg-emerald-600 text-white border-emerald-600'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -140,7 +142,7 @@ export const GuruDocumentList: React.FC = () => {
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors min-h-[40px] cursor-pointer ${
               viewMode === 'list'
                 ? 'bg-emerald-600 text-white border-emerald-600'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'

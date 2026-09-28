@@ -86,6 +86,12 @@ export const AdminUserList: React.FC = () => {
         role: 'guru'
       });
 
+      try {
+        const userPasswords: Record<string, string> = JSON.parse(localStorage.getItem('user_passwords_v1') || '{}');
+        userPasswords[cleanedEmail] = newPassword;
+        localStorage.setItem('user_passwords_v1', JSON.stringify(userPasswords));
+      } catch (e) {}
+
       setToast({ message: 'Akun guru baru berhasil ditambahkan.', type: 'success' });
       setAddModalOpen(false);
       // Reset form
@@ -191,9 +197,9 @@ export const AdminUserList: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Manajemen Pengguna & Guru</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Manajemen Pengguna & Guru</h1>
           <p className="text-xs text-slate-500 mt-1">
             Kelola data guru, administrator, serta status keaktifan akun dalam sistem.
           </p>
@@ -201,7 +207,7 @@ export const AdminUserList: React.FC = () => {
 
         <button
           onClick={() => setAddModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors shrink-0"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors shrink-0 min-h-[44px] cursor-pointer"
         >
           <UserPlus className="w-4 h-4" />
           Tambah Akun Guru Baru
@@ -209,19 +215,21 @@ export const AdminUserList: React.FC = () => {
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Cari nama, email, NIP, atau jabatan guru..."
-        />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex-1">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Cari nama, email, NIP, atau jabatan guru..."
+          />
+        </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
           <span className="text-xs font-semibold text-slate-500">Filter Peran:</span>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as any)}
-            className="text-xs font-semibold bg-white border border-slate-200 rounded-xl p-2.5 focus:ring-1 focus:ring-blue-500"
+            className="text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 sm:py-2.5 focus:ring-1 focus:ring-blue-500 min-h-[40px]"
           >
             <option value="semua">Semua Peran</option>
             <option value="guru">Guru / Pendidik</option>
@@ -230,107 +238,197 @@ export const AdminUserList: React.FC = () => {
         </div>
       </div>
 
-      {/* Users Table */}
+      {/* Users Display */}
       {loading ? (
         <LoadingSpinner label="Memuat daftar pengguna..." />
+      ) : filteredUsers.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-500">
+          Tidak ada pengguna yang cocok dengan kriteria pencarian.
+        </div>
       ) : (
-        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Pengguna</th>
-                  <th className="py-3 px-4">NIP / NUPTK</th>
-                  <th className="py-3 px-4">Jabatan</th>
-                  <th className="py-3 px-4">Peran</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
-                {filteredUsers.map((user) => (
-                  <tr key={user.uid} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 text-blue-600 font-bold flex items-center justify-center shrink-0">
-                          {user.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-800">{user.name}</p>
-                          <p className="text-[11px] text-slate-400">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
+        <div className="space-y-3">
+          {/* Mobile Card View (< 768px) */}
+          <div className="block md:hidden space-y-3">
+            {filteredUsers.map((user) => (
+              <div
+                key={user.uid}
+                className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 text-blue-600 font-bold flex items-center justify-center shrink-0">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-800 text-xs sm:text-sm truncate">{user.name}</p>
+                      <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                        {user.position || 'Guru Kelas'} {user.nip ? `• NIP: ${user.nip}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    {user.role === 'admin' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                        <Shield className="w-3 h-3 text-blue-600" />
+                        Admin
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <GraduationCap className="w-3 h-3 text-emerald-600" />
+                        Guru
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                    <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
-                      {user.nip || user.nuptk || '-'}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-slate-600">
-                      {user.position || 'Guru Kelas'}
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      {user.role === 'admin' ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                          <Shield className="w-3 h-3 text-blue-600" />
-                          Admin
-                        </span>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStatus(user)}
+                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border transition-colors cursor-pointer min-h-[32px] ${
+                        user.status === 'aktif'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}
+                    >
+                      {user.status === 'aktif' ? (
+                        <>
+                          <CheckCircle className="w-3 h-3 text-emerald-600" />
+                          Aktif
+                        </>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <GraduationCap className="w-3 h-3 text-emerald-600" />
-                          Guru
-                        </span>
+                        <>
+                          <XCircle className="w-3 h-3 text-rose-600" />
+                          Nonaktif
+                        </>
                       )}
-                    </td>
+                    </button>
+                  </div>
 
-                    <td className="py-3.5 px-4">
-                      <button
-                        onClick={() => handleToggleStatus(user)}
-                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border transition-colors ${
-                          user.status === 'aktif'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                            : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                        }`}
-                      >
-                        {user.status === 'aktif' ? (
-                          <>
-                            <CheckCircle className="w-3 h-3 text-emerald-600" />
-                            Aktif
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-3 h-3 text-rose-600" />
-                            Nonaktif
-                          </>
-                        )}
-                      </button>
-                    </td>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleEditOpen(user)}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-blue-600 font-bold text-xs rounded-xl border border-slate-200 hover:border-blue-200 transition-colors inline-flex items-center gap-1 min-h-[36px] cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOpen(user)}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-rose-50 text-rose-600 font-bold text-xs rounded-xl border border-slate-200 hover:border-rose-200 transition-colors inline-flex items-center gap-1 min-h-[36px] cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
 
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => handleEditOpen(user)}
-                          className="px-2.5 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          Edit
-                        </button>
-
-                        <button
-                          onClick={() => handleDeleteOpen(user)}
-                          className="px-2.5 py-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1"
-                          title="Hapus Akun Pengguna"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
-                          Hapus
-                        </button>
-                      </div>
-                    </td>
+          {/* Desktop/Tablet Table View (>= 768px) */}
+          <div className="hidden md:block bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Pengguna</th>
+                    <th className="py-3 px-4">NIP / NUPTK</th>
+                    <th className="py-3 px-4">Jabatan</th>
+                    <th className="py-3 px-4">Peran</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Aksi</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.uid} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 text-blue-600 font-bold flex items-center justify-center shrink-0">
+                            {user.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-800">{user.name}</p>
+                            <p className="text-[11px] text-slate-400">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
+                        {user.nip || user.nuptk || '-'}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-slate-600">
+                        {user.position || 'Guru Kelas'}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        {user.role === 'admin' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                            <Shield className="w-3 h-3 text-blue-600" />
+                            Admin
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <GraduationCap className="w-3 h-3 text-emerald-600" />
+                            Guru
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <button
+                          onClick={() => handleToggleStatus(user)}
+                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                            user.status === 'aktif'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                          }`}
+                        >
+                          {user.status === 'aktif' ? (
+                            <>
+                              <CheckCircle className="w-3 h-3 text-emerald-600" />
+                              Aktif
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="w-3 h-3 text-rose-600" />
+                              Nonaktif
+                            </>
+                          )}
+                        </button>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleEditOpen(user)}
+                            className="px-2.5 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteOpen(user)}
+                            className="px-2.5 py-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            title="Hapus Akun Pengguna"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Hapus
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -426,14 +524,14 @@ export const AdminUserList: React.FC = () => {
               type="button"
               onClick={() => setAddModalOpen(false)}
               disabled={saving}
-              className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl"
+              className="min-h-[44px] px-5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md"
+              className="min-h-[44px] px-6 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center"
             >
               {saving ? 'Menyimpan...' : 'Buat Akun Guru'}
             </button>
@@ -457,7 +555,7 @@ export const AdminUserList: React.FC = () => {
                   type="text"
                   value={editingUser.name}
                   onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                 />
               </div>
 
@@ -467,7 +565,7 @@ export const AdminUserList: React.FC = () => {
                   type="text"
                   value={editingUser.position || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, position: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                 />
               </div>
 
@@ -477,7 +575,7 @@ export const AdminUserList: React.FC = () => {
                   type="text"
                   value={editingUser.nip || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, nip: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                 />
               </div>
 
@@ -487,7 +585,7 @@ export const AdminUserList: React.FC = () => {
                   type="text"
                   value={editingUser.nuptk || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, nuptk: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                 />
               </div>
 
@@ -497,7 +595,7 @@ export const AdminUserList: React.FC = () => {
                   type="text"
                   value={editingUser.phone || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
                 />
               </div>
             </div>
@@ -506,14 +604,14 @@ export const AdminUserList: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl"
+                className="min-h-[44px] px-5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md"
+                className="min-h-[44px] px-6 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center"
               >
                 {saving ? 'Memperbarui...' : 'Simpan Perubahan'}
               </button>
@@ -562,7 +660,7 @@ export const AdminUserList: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setDeleteModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors"
+                className="min-h-[44px] px-5 py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center"
               >
                 Batal
               </button>
@@ -570,7 +668,7 @@ export const AdminUserList: React.FC = () => {
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={deleting}
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-200 transition-colors inline-flex items-center gap-1.5"
+                className="min-h-[44px] px-6 py-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-200 transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
                 {deleting ? 'Menghapus...' : 'Ya, Hapus Permanen'}

@@ -124,12 +124,12 @@ export const GuruDashboard: React.FC = () => {
       {/* Welcome Banner */}
       <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 -mr-12 -mt-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
           <div>
             <span className="inline-block px-3 py-1 bg-white/15 text-emerald-100 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 border border-white/20">
               PORTAL UTAMA GURU & TENAGA PENDIDIK
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
               Selamat datang, {userProfile?.name || 'Bapak/Ibu Guru'}!
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 mt-1 max-w-2xl leading-relaxed">
@@ -137,10 +137,10 @@ export const GuruDashboard: React.FC = () => {
             </p>
           </div>
 
-          <div className="shrink-0">
+          <div className="shrink-0 w-full sm:w-auto">
             <button
               onClick={() => navigate('/guru/documents')}
-              className="inline-flex items-center gap-2 px-5 py-3 bg-white text-emerald-800 hover:bg-emerald-50 font-bold text-xs rounded-2xl shadow-lg transition-all hover:scale-[1.02]"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-emerald-800 hover:bg-emerald-50 active:bg-emerald-100 font-bold text-xs rounded-2xl shadow-lg transition-all min-h-[44px] cursor-pointer"
             >
               <Search className="w-4 h-4 text-emerald-600" />
               Cari & Unduh Dokumen
@@ -168,61 +168,61 @@ export const GuruDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+      {/* Overview Cards (1 col mobile, 3 cols tablet & desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3.5 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
             <FileText className="w-6 h-6" />
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-500 block">Total Dokumen Tersedia</span>
-            <span className="text-2xl font-black text-slate-800">{documents.length}</span>
+          <div className="min-w-0">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 block truncate">Total Dokumen Tersedia</span>
+            <span className="text-xl sm:text-2xl font-black text-slate-800">{documents.length}</span>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3.5 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
             <FolderKanban className="w-6 h-6" />
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-500 block">Kategori Administrasi</span>
-            <span className="text-2xl font-black text-slate-800">{categories.length}</span>
+          <div className="min-w-0">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 block truncate">Kategori Administrasi</span>
+            <span className="text-xl sm:text-2xl font-black text-slate-800">{categories.length}</span>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-4">
-          <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center shrink-0">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center gap-3.5 sm:gap-4">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center shrink-0">
             <DownloadCloud className="w-6 h-6" />
           </div>
-          <div>
-            <span className="text-xs font-semibold text-slate-500 block">Unduhan Saya</span>
-            <span className="text-2xl font-black text-slate-800">{myDownloads.length}</span>
+          <div className="min-w-0">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 block truncate">Unduhan Saya</span>
+            <span className="text-xl sm:text-2xl font-black text-slate-800">{myDownloads.length}</span>
           </div>
         </div>
       </div>
 
       {/* Category Shortcuts Grid */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
           <div>
             <h3 className="text-sm font-bold text-slate-800">Kategori Dokumen Administrasi</h3>
             <p className="text-xs text-slate-400">Pilih kategori untuk melihat seluruh berkas pendukung</p>
           </div>
           <Link
             to="/guru/categories"
-            className="text-xs font-bold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1"
+            className="text-xs font-bold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1 self-start sm:self-auto py-1"
           >
             Lihat Semua Kategori
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 min-[400px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
           {categories.slice(0, 14).map((cat) => (
             <button
               key={cat.categoryId}
               onClick={() => navigate(`/guru/documents?category=${cat.categoryId}`)}
-              className="p-3 bg-slate-50 hover:bg-emerald-50/60 border border-slate-200/80 hover:border-emerald-200 rounded-2xl flex flex-col items-center text-center space-y-2 group transition-all"
+              className="p-3 bg-slate-50 hover:bg-emerald-50/60 active:bg-emerald-100/80 border border-slate-200/80 hover:border-emerald-200 rounded-2xl flex flex-col items-center text-center space-y-2 group transition-all min-h-[96px] justify-center cursor-pointer"
             >
               <div className="p-2.5 bg-white rounded-xl shadow-2xs border border-slate-100 group-hover:scale-105 transition-transform">
                 {categoryIconMap[cat.categoryId] || <Folder className="w-6 h-6 text-emerald-600" />}
@@ -237,21 +237,21 @@ export const GuruDashboard: React.FC = () => {
 
       {/* Recent Documents Grid */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
           <div>
             <h3 className="text-sm font-bold text-slate-800">Dokumen Administrasi Terbaru</h3>
             <p className="text-xs text-slate-500">Dokumen yang baru diunggah oleh admin sekolah</p>
           </div>
           <Link
             to="/guru/documents"
-            className="text-xs font-bold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1"
+            className="text-xs font-bold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1 self-start sm:self-auto py-1"
           >
             Lihat Semua Dokumen ({documents.length})
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {recentDocs.map((doc) => (
             <DocumentCard
               key={doc.documentId}

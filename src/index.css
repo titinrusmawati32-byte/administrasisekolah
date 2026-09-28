@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Ensure smooth tap and clean touch behavior across mobile & desktop */
+html, body {
+  -webkit-tap-highlight-color: transparent;
+}

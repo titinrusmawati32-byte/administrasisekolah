@@ -63,9 +63,9 @@ export const AdminActivityLog: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Audit Trail & Log Aktivitas Sistem</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Audit Trail & Log Aktivitas Sistem</h1>
           <p className="text-xs text-slate-500 mt-1">
             Rekam jejak seluruh tindakan login, pengunggahan, pembaruan, dan unduhan dokumen di sekolah.
           </p>
@@ -74,7 +74,7 @@ export const AdminActivityLog: React.FC = () => {
         <button
           onClick={handleExportCSV}
           disabled={logs.length === 0}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-200 transition-colors disabled:opacity-50 shrink-0"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-200 transition-colors disabled:opacity-50 shrink-0 min-h-[44px] cursor-pointer"
         >
           <Download className="w-4 h-4" />
           Ekspor Log ke CSV
@@ -88,41 +88,74 @@ export const AdminActivityLog: React.FC = () => {
         placeholder="Cari berdasarkan nama pengguna, email, aksi, atau dokumen..."
       />
 
-      {/* Table */}
+      {/* Content */}
       {loading ? (
         <LoadingSpinner label="Memuat rekam aktivitas..." />
+      ) : filteredLogs.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-500">
+          Belum ada aktivitas yang tercatat sesuai pencarian.
+        </div>
       ) : (
-        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Waktu</th>
-                  <th className="py-3 px-4">Pengguna</th>
-                  <th className="py-3 px-4">Aksi / Tindakan</th>
-                  <th className="py-3 px-4">Dokumen / Detail</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
-                {filteredLogs.map((l) => (
-                  <tr key={l.activityId} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4 text-slate-500 whitespace-nowrap text-[11px]">
-                      {new Date(l.timestamp).toLocaleString('id-ID')}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-slate-800 whitespace-nowrap">
-                      {l.userName}
-                      <span className="block text-[10px] font-normal text-slate-400">{l.userEmail}</span>
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      {getActionBadge(l.action)}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 truncate max-w-xs">
-                      {l.documentName || '-'}
-                    </td>
+        <div className="space-y-3">
+          {/* Mobile Card List (< 768px) */}
+          <div className="block md:hidden space-y-2.5">
+            {filteredLogs.map((l) => (
+              <div
+                key={l.activityId}
+                className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    {new Date(l.timestamp).toLocaleString('id-ID')}
+                  </span>
+                  <div>{getActionBadge(l.action)}</div>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-800 text-xs truncate">{l.userName}</p>
+                  <p className="text-[11px] text-slate-400 truncate">{l.userEmail}</p>
+                </div>
+                {l.documentName && (
+                  <div className="p-2 bg-slate-50 rounded-lg text-slate-600 text-[11px] font-medium border border-slate-100 break-words">
+                    📄 {l.documentName}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop/Tablet Table (>= 768px) */}
+          <div className="hidden md:block bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Waktu</th>
+                    <th className="py-3 px-4">Pengguna</th>
+                    <th className="py-3 px-4">Aksi / Tindakan</th>
+                    <th className="py-3 px-4">Dokumen / Detail</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                  {filteredLogs.map((l) => (
+                    <tr key={l.activityId} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4 text-slate-500 whitespace-nowrap text-[11px]">
+                        {new Date(l.timestamp).toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-slate-800 whitespace-nowrap">
+                        {l.userName}
+                        <span className="block text-[10px] font-normal text-slate-400">{l.userEmail}</span>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        {getActionBadge(l.action)}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 truncate max-w-xs">
+                        {l.documentName || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

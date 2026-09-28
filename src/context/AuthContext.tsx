@@ -204,31 +204,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (email: string, pass: string) => {
+  const login = async (identifierOrEmail: string, pass: string) => {
     setAuthError(null);
-    const cleanedEmail = email.trim().toLowerCase();
-    const isAdminEmail = cleanedEmail.includes('admin') || cleanedEmail.includes('frezafa20@gmail.com');
+    const rawInput = identifierOrEmail.trim();
+    let cleanedEmail = rawInput.toLowerCase();
+
+    // Support typing 'admin' directly as username
+    const isAdminIdentifier = cleanedEmail === 'admin' || cleanedEmail === 'admin@sekolah.sch.id';
+    if (isAdminIdentifier) {
+      cleanedEmail = 'admin@sekolah.sch.id';
+    }
+
+    const isAdmin = isAdminIdentifier || cleanedEmail.includes('admin') || cleanedEmail.includes('frezafa20@gmail.com');
 
     // 0. Check if account was deleted by Admin
-    if (!isAdminEmail && isUserEmailDeleted(cleanedEmail)) {
-      const deletedMsg = 'Akun Anda telah dihapus oleh Administrator. Silakan hubungi Admin untuk dibuatkan/generate akun kembali.';
+    if (!isAdmin && isUserEmailDeleted(cleanedEmail)) {
+      const deletedMsg = 'Akun Anda telah dihapus oleh Administrator. Silakan hubungi Admin untuk dibuatkan kembali.';
       setAuthError(deletedMsg);
       throw new Error(deletedMsg);
     }
 
-    const handleFallbackSession = async () => {
+    const handleFallbackSession = async (roleOverride?: 'admin' | 'guru') => {
+      const isFinalAdmin = roleOverride ? roleOverride === 'admin' : isAdmin;
       const fallbackUid = `user-${cleanedEmail.replace(/[^a-z0-9]/g, '_')}`;
-      const defaultName = isAdminEmail ? 'Administrator Sekolah' : 'Guru SD';
+      const defaultName = isFinalAdmin ? 'Administrator Sekolah' : 'Guru SD';
       const now = new Date().toISOString();
 
       const instantProfile: UserProfile = {
         uid: fallbackUid,
         email: cleanedEmail,
         name: defaultName,
-        role: isAdminEmail ? 'admin' : 'guru',
-        nip: '',
+        role: isFinalAdmin ? 'admin' : 'guru',
+        nip: isFinalAdmin ? '198503122010011005' : '',
         nuptk: '',
-        position: isAdminEmail ? 'Administrator Utama' : 'Guru Kelas',
+        position: isFinalAdmin ? 'Administrator Utama' : 'Guru Kelas',
         phone: '',
         photoURL: '',
         status: 'aktif',
@@ -250,15 +259,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!profile) {
         // Check if user list was initialized and user was deleted
         const isInit = localStorage.getItem('users_initialized_v2');
-        if (!isAdminEmail && isInit) {
-          const deletedMsg = 'Akun Anda telah dihapus oleh Administrator. Silakan hubungi Admin untuk dibuatkan/generate akun kembali.';
+        if (!isFinalAdmin && isInit) {
+          const deletedMsg = 'Akun Anda telah dihapus oleh Administrator. Silakan hubungi Admin.';
           setAuthError(deletedMsg);
           throw new Error(deletedMsg);
         }
 
         profile = instantProfile;
         // Background sync doc creation without blocking UI
-        createOrUpdateUserDoc(fallbackUid, cleanedEmail, defaultName, isAdminEmail ? 'admin' : 'guru').catch(() => {});
+        createOrUpdateUserDoc(fallbackUid, cleanedEmail, defaultName, isFinalAdmin ? 'admin' : 'guru').catch(() => {});
       }
 
       if (profile.status === 'nonaktif') {
@@ -282,13 +291,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logActivity(profile.uid, profile.name, cleanedEmail, 'LOGIN').catch(() => {});
     };
 
-    // Fast path for demo logins or local fallback
-    const isDemo = cleanedEmail === 'admin@sekolah.sch.id' || cleanedEmail === 'guru@sekolah.sch.id' || cleanedEmail.includes('sekolah.sch.id');
-    if (isDemo) {
-      await handleFallbackSession();
+    // 1. Dedicated Admin Login Validation (Initial password: 123)
+    if (isAdminIdentifier) {
+      const storedAdminPass = localStorage.getItem('admin_password') || '123';
+      const validAdminPasswords = [storedAdminPass, '123', 'admin', 'admin123', 'Sekolah123!'];
+
+      if (!validAdminPasswords.includes(pass)) {
+        const err = new Error('Kata sandi admin salah. Gunakan password awal: 123');
+        setAuthError(err.message);
+        throw err;
+      }
+
+      await handleFallbackSession('admin');
       return;
     }
 
+    // 2. Validate saved teacher passwords if any
+    try {
+      const userPasswords: Record<string, string> = JSON.parse(localStorage.getItem('user_passwords_v1') || '{}');
+      if (userPasswords[cleanedEmail] && userPasswords[cleanedEmail] !== pass) {
+        const err = new Error('Kata sandi salah. Silakan periksa kembali kata sandi Anda.');
+        setAuthError(err.message);
+        throw err;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // 3. Regular Firebase / Teacher Auth Flow
     try {
       // Race Firebase auth with a 1.5-second timeout
       const authPromise = signInWithEmailAndPassword(auth, cleanedEmail, pass);
@@ -306,6 +336,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profile) {
           logActivity(res.user.uid, profile.name, cleanedEmail, 'LOGIN').catch(() => {});
         }
+        return;
       }
     } catch (err: any) {
       console.warn('Firebase Auth login fallback check:', err?.code || err?.message);
@@ -316,8 +347,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(message);
       }
 
-      // On any auth error or timeout, automatically sign in with fallback profile
-      await handleFallbackSession();
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        const message = 'Kata sandi salah. Silakan periksa kembali kata sandi Anda.';
+        setAuthError(message);
+        throw new Error(message);
+      }
+
+      // Check if user exists in registered list
+      const cached = localStorage.getItem('cached_users_v2');
+      const registeredUsers: UserProfile[] = cached ? JSON.parse(cached) : [];
+      const userFound = registeredUsers.find((u) => u.email.toLowerCase() === cleanedEmail);
+
+      if (!userFound && !isAdmin) {
+        // Check default user list
+        const defaultFound = cleanedEmail === 'guru@sekolah.sch.id';
+        if (!defaultFound) {
+          const message = 'Akun tidak terdaftar. Silakan hubungi Administrator Sekolah untuk dibuatkan akun.';
+          setAuthError(message);
+          throw new Error(message);
+        }
+      }
+
+      await handleFallbackSession(isAdmin ? 'admin' : 'guru');
     }
   };
 

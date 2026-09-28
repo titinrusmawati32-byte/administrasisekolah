@@ -87,18 +87,20 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
       </div>
 
       {/* Action Footer */}
-      <div className="bg-slate-50/80 px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-2">
+      <div className="bg-slate-50/80 px-3.5 sm:px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-2">
         <button
+          type="button"
           onClick={() => onPreview(doc)}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors shadow-2xs"
+          className="flex-1 min-h-[40px] inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-white hover:bg-slate-100 active:bg-slate-200 border border-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors shadow-2xs cursor-pointer"
         >
           <Eye className="w-3.5 h-3.5 text-slate-500" />
           Preview
         </button>
 
         <button
+          type="button"
           onClick={() => onDownload(doc)}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition-colors shadow-xs shadow-blue-200"
+          className="flex-1 min-h-[40px] inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl transition-colors shadow-xs shadow-blue-200 cursor-pointer"
         >
           <Download className="w-3.5 h-3.5" />
           Unduh
@@ -108,8 +110,9 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
           <div className="flex items-center gap-1 border-l border-slate-200 pl-2 ml-1">
             {onEdit && (
               <button
+                type="button"
                 onClick={() => onEdit(doc)}
-                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs"
+                className="min-h-[38px] min-w-[38px] p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 rounded-xl transition-colors text-xs flex items-center justify-center cursor-pointer"
                 title="Edit Dokumen"
               >
                 ✏️
@@ -117,8 +120,9 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
             )}
             {onDelete && (
               <button
+                type="button"
                 onClick={() => onDelete(doc)}
-                className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors text-xs"
+                className="min-h-[38px] min-w-[38px] p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 rounded-xl transition-colors text-xs flex items-center justify-center cursor-pointer"
                 title="Hapus Dokumen"
               >
                 🗑️

@@ -38,7 +38,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors disabled:opacity-50"
+            className="flex-1 min-h-[44px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
           >
             {cancelText}
           </button>
@@ -46,10 +46,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold text-white shadow-md transition-colors disabled:opacity-50 ${
+            className={`flex-1 min-h-[44px] py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold text-white shadow-md transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center ${
               isDangerous
-                ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-200'
-                : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
+                ? 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 shadow-rose-200'
+                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-blue-200'
             }`}
           >
             {loading ? 'Memproses...' : confirmText}

@@ -135,9 +135,9 @@ export const AdminDocumentList: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Semua Dokumen Administrasi</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Semua Dokumen Administrasi</h1>
           <p className="text-xs text-slate-500 mt-1">
             Kelola, perbarui, dan distribusikan dokumen sekolah untuk para guru.
           </p>
@@ -145,7 +145,7 @@ export const AdminDocumentList: React.FC = () => {
 
         <Link
           to="/admin/documents/create"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-all hover:scale-[1.02] shrink-0"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-all hover:scale-[1.02] shrink-0 min-h-[44px] cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Tambah Dokumen Baru
@@ -153,18 +153,20 @@ export const AdminDocumentList: React.FC = () => {
       </div>
 
       {/* Controls Bar: Search & Toggle View */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Cari berdasarkan nama dokumen, kategori, deskripsi, atau tahun..."
-        />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex-1">
+          <SearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Cari berdasarkan nama dokumen, kategori, deskripsi, atau tahun..."
+          />
+        </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+        <div className="flex items-center justify-end gap-2 shrink-0">
           <span className="text-xs font-semibold text-slate-500 mr-1">Tampilan:</span>
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors min-h-[40px] cursor-pointer ${
               viewMode === 'grid'
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -175,7 +177,7 @@ export const AdminDocumentList: React.FC = () => {
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+            className={`px-3 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors min-h-[40px] cursor-pointer ${
               viewMode === 'list'
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
