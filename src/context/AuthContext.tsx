@@ -11,7 +11,7 @@ import {
 import { auth, db } from '../services/firebase';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { UserProfile, SchoolSettings } from '../types';
-import { getUserProfile, createOrUpdateUserDoc, updateUserProfile } from '../services/userService';
+import { getUserProfile, createOrUpdateUserDoc, updateUserProfile, isUserEmailDeleted } from '../services/userService';
 import { getSchoolSettings } from '../services/settingsService';
 import { initializeSchoolData } from '../services/seedService';
 import { logActivity } from '../services/activityService';
@@ -48,28 +48,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authError, setAuthError] = useState<string | null>(null);
 
   const fetchProfile = async (uid: string, email: string, displayName?: string) => {
+    const cleanedEmail = email.toLowerCase();
+    const isAdminEmail = cleanedEmail.includes('admin') || cleanedEmail.includes('frezafa20@gmail.com');
+
+    // 1. Check local cached profile first for instant UI response on refresh
+    const cachedStr = localStorage.getItem('cached_user_profile');
+    if (cachedStr) {
+      try {
+        const cached: UserProfile = JSON.parse(cachedStr);
+        if (cached && (cached.uid === uid || cached.email.toLowerCase() === cleanedEmail)) {
+          setUserProfile(cached);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     try {
       let profile = await getUserProfile(uid);
       if (!profile) {
         // Search by email if uid differs
-        const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
+        const q = query(collection(db, 'users'), where('email', '==', cleanedEmail));
         const snap = await getDocs(q);
         if (!snap.empty) {
           profile = snap.docs[0].data() as UserProfile;
         } else {
-          const isAdminEmail = email.toLowerCase().includes('admin');
           profile = await createOrUpdateUserDoc(
             uid,
-            email,
+            cleanedEmail,
             displayName || (isAdminEmail ? 'Administrator Sekolah' : 'Guru SD'),
             isAdminEmail ? 'admin' : 'guru'
           );
         }
       }
-      setUserProfile(profile);
+
+      // Ensure frezafa20@gmail.com or admin emails retain admin role
+      if (isAdminEmail && profile && profile.role !== 'admin') {
+        profile = { ...profile, role: 'admin', position: 'Administrator Utama' };
+        updateUserProfile(uid, { role: 'admin', position: 'Administrator Utama' }).catch(() => {});
+      }
+
+      if (profile) {
+        setUserProfile(profile);
+        localStorage.setItem('cached_user_profile', JSON.stringify(profile));
+        localStorage.setItem(
+          LOCAL_SESSION_KEY,
+          JSON.stringify({ uid: profile.uid, email: cleanedEmail, name: profile.name, role: profile.role })
+        );
+      }
       return profile;
     } catch (err) {
       console.error('Error fetching user profile in auth context:', err);
+      const cachedStr = localStorage.getItem('cached_user_profile');
+      if (cachedStr) {
+        try {
+          const cachedProfile = JSON.parse(cachedStr);
+          setUserProfile(cachedProfile);
+          return cachedProfile;
+        } catch (e) {
+          // ignore
+        }
+      }
       return null;
     }
   };
@@ -145,10 +184,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, pass: string) => {
     setAuthError(null);
     const cleanedEmail = email.trim().toLowerCase();
+    const isAdminEmail = cleanedEmail.includes('admin') || cleanedEmail.includes('frezafa20@gmail.com');
+
+    // 0. Check if account was deleted by Admin
+    if (!isAdminEmail && isUserEmailDeleted(cleanedEmail)) {
+      const deletedMsg = 'Akun Anda telah dihapus oleh Administrator. Silakan hubungi Admin untuk dibuatkan/generate akun kembali.';
+      setAuthError(deletedMsg);
+      throw new Error(deletedMsg);
+    }
 
     const handleFallbackSession = async () => {
       const fallbackUid = `user-${cleanedEmail.replace(/[^a-z0-9]/g, '_')}`;
-      const isAdminEmail = cleanedEmail.includes('admin') || cleanedEmail.includes('frezafa20@gmail.com');
       const defaultName = isAdminEmail ? 'Administrator Sekolah' : 'Guru SD';
       const now = new Date().toISOString();
 
@@ -179,6 +225,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!profile) {
+        // Check if user list was initialized and user was deleted
+        const isInit = localStorage.getItem('users_initialized_v2');
+        if (!isAdminEmail && isInit) {
+          const deletedMsg = 'Akun Anda telah dihapus oleh Administrator. Silakan hubungi Admin untuk dibuatkan/generate akun kembali.';
+          setAuthError(deletedMsg);
+          throw new Error(deletedMsg);
+        }
+
         profile = instantProfile;
         // Background sync doc creation without blocking UI
         createOrUpdateUserDoc(fallbackUid, cleanedEmail, defaultName, isAdminEmail ? 'admin' : 'guru').catch(() => {});
@@ -301,7 +355,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const switchToAdminRole = async () => {
     if (!currentUser || !userProfile) {
-      // If no active profile, log in as default admin
       await login('admin@sekolah.sch.id', 'Sekolah123!');
       return;
     }
@@ -312,6 +365,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: new Date().toISOString()
     };
     setUserProfile(updatedProfile);
+    localStorage.setItem('cached_user_profile', JSON.stringify(updatedProfile));
+    localStorage.setItem(
+      LOCAL_SESSION_KEY,
+      JSON.stringify({ uid: updatedProfile.uid, email: updatedProfile.email, name: updatedProfile.name, role: 'admin' })
+    );
+
     try {
       await updateUserProfile(currentUser.uid, { role: 'admin' });
     } catch (e) {
@@ -324,6 +383,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await logActivity(currentUser.uid, userProfile.name, currentUser.email || '', 'LOGOUT');
     }
     localStorage.removeItem(LOCAL_SESSION_KEY);
+    localStorage.removeItem('cached_user_profile');
     setGoogleAccessToken(null);
     try {
       await signOut(auth);

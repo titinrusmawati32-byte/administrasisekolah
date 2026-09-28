@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Users, UserPlus, Shield, GraduationCap, CheckCircle, XCircle, Pencil, Search, Lock } from 'lucide-react';
-import { getAllUsers, setUserStatus, updateUserProfile, createTeacherUser } from '../../services/userService';
+import { Users, UserPlus, Shield, GraduationCap, CheckCircle, XCircle, Pencil, Trash2, Search, Lock, AlertTriangle } from 'lucide-react';
+import { getAllUsers, setUserStatus, updateUserProfile, createTeacherUser, deleteUserRecord } from '../../services/userService';
 import { UserProfile, UserRole, UserStatus } from '../../types';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Modal } from '../../components/common/Modal';
@@ -28,6 +28,11 @@ export const AdminUserList: React.FC = () => {
   // Edit Teacher Modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+
+  // Delete Teacher Modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -143,6 +148,30 @@ export const AdminUserList: React.FC = () => {
       setToast({ message: 'Gagal memperbarui pengguna.', type: 'error' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteOpen = (user: UserProfile) => {
+    setDeletingUser(user);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return;
+    setDeleting(true);
+    try {
+      await deleteUserRecord(deletingUser.uid, deletingUser.email);
+      setToast({
+        message: `Akun pengguna ${deletingUser.name} (${deletingUser.email}) berhasil dihapus dari server.`,
+        type: 'success'
+      });
+      setDeleteModalOpen(false);
+      setDeletingUser(null);
+      await loadUsers();
+    } catch (err) {
+      setToast({ message: 'Gagal menghapus pengguna dari server.', type: 'error' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -279,13 +308,24 @@ export const AdminUserList: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleEditOpen(user)}
-                        className="px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Edit
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleEditOpen(user)}
+                          className="px-2.5 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteOpen(user)}
+                          className="px-2.5 py-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1"
+                          title="Hapus Akun Pengguna"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
+                          Hapus
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -479,6 +519,64 @@ export const AdminUserList: React.FC = () => {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && deletingUser && (
+        <Modal
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          title="Konfirmasi Hapus Akun Pengguna"
+        >
+          <div className="space-y-4">
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-rose-900">Perhatian: Akun akan Dihapus Permanen</h4>
+                <p className="text-xs text-rose-700 leading-relaxed">
+                  Apakah Anda yakin ingin menghapus akun <span className="font-bold underline">{deletingUser.name}</span> ({deletingUser.email}) dari server?
+                </p>
+                <p className="text-[11px] text-rose-600 italic pt-1">
+                  Pengguna tidak akan bisa login lagi ke sistem sampai Admin membuatkan/generate akun baru kembali.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-1.5 text-xs text-slate-600">
+              <div className="flex justify-between">
+                <span className="font-medium text-slate-400">Nama:</span>
+                <span className="font-bold text-slate-800">{deletingUser.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-slate-400">Email Login:</span>
+                <span className="font-mono text-slate-800">{deletingUser.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-slate-400">Peran:</span>
+                <span className="capitalize font-semibold text-slate-700">{deletingUser.role}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-200 transition-colors inline-flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                {deleting ? 'Menghapus...' : 'Ya, Hapus Permanen'}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 
