@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { School, Save, Building, Mail, Phone, Globe, UserCheck, Database, FileSpreadsheet, HardDrive, CheckCircle2, ExternalLink, RefreshCw, Download } from 'lucide-react';
+import { School, Save, Building, Mail, Phone, Globe, UserCheck, Database, FileSpreadsheet, HardDrive, CheckCircle2, ExternalLink, RefreshCw, Download, Copy, Check, AlertTriangle, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { getSchoolSettings, updateSchoolSettings } from '../../services/settingsService';
 import { getAllDocuments } from '../../services/documentService';
 import { getCategories } from '../../services/categoryService';
@@ -20,8 +20,22 @@ export const AdminSchoolSettings: React.FC = () => {
   const [syncingSheets, setSyncingSheets] = useState(false);
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [showDomainGuide, setShowDomainGuide] = useState(false);
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
   const { refreshSettings, googleAccessToken, connectGoogleWorkspace } = useAuth();
+
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const firebaseSettingsUrl = 'https://console.firebase.google.com/project/gen-lang-client-0561181715/authentication/settings';
+
+  const handleCopyDomain = () => {
+    if (currentHostname) {
+      navigator.clipboard.writeText(currentHostname);
+      setCopiedDomain(true);
+      setTimeout(() => setCopiedDomain(false), 2500);
+      setToast({ message: `Domain "${currentHostname}" berhasil disalin ke clipboard!`, type: 'success' });
+    }
+  };
 
   useEffect(() => {
     getSchoolSettings().then((s) => {
@@ -90,8 +104,9 @@ export const AdminSchoolSettings: React.FC = () => {
           type: 'info'
         });
       } else if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain')) {
+        setShowDomainGuide(true);
         setToast({
-          message: 'Domain ini belum diizinkan oleh Firebase OAuth. Silakan gunakan tombol "Unduh Backup CSV" untuk mengunduh seluruh data database Excel/CSV secara instan.',
+          message: 'Domain belum didaftarkan di Firebase Console. Salin domain di bawah dan tambahkan ke Authorized Domains!',
           type: 'error'
         });
       } else {
@@ -204,6 +219,88 @@ export const AdminSchoolSettings: React.FC = () => {
               <span>Buka Google Sheet</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
+          )}
+        </div>
+
+        {/* Toggle Domain Whitelist Info */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => setShowDomainGuide(!showDomainGuide)}
+            className="text-[11px] font-medium text-blue-200/90 hover:text-white flex items-center gap-1.5 underline decoration-blue-400/50 underline-offset-4 transition-colors"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
+            <span>Cara Mengatasi Pesan "Domain Belum Didaftarkan" (Authorized Domains)</span>
+            {showDomainGuide ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+
+          {showDomainGuide && (
+            <div className="mt-3 p-4 bg-slate-900/90 rounded-2xl border border-blue-500/30 text-xs space-y-3 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-semibold text-amber-200">
+                    Firebase Auth mewajibkan domain web didaftarkan di Authorized Domains untuk mengizinkan pop-up Google OAuth.
+                  </p>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    Ikuti 3 langkah mudah ini untuk mengaktifkan sinkronisasi langsung:
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 1: Copy Domain */}
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-slate-300">1. Domain Aplikasi Anda Saat Ini:</span>
+                  <button
+                    type="button"
+                    onClick={handleCopyDomain}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold transition-all shadow-xs"
+                  >
+                    {copiedDomain ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-300" />
+                        <span>Tersalin!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Salin Domain</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="p-2 bg-slate-950/80 rounded-lg border border-slate-800 font-mono text-[11px] text-emerald-400 select-all break-all">
+                  {currentHostname || 'ais-dev-mjyg6z3iosdh7roeonbkba-8108198911.asia-east1.run.app'}
+                </div>
+              </div>
+
+              {/* Step 2 & 3: Paste to Firebase Console */}
+              <div className="space-y-1.5 text-slate-300 text-[11px]">
+                <p className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-blue-600/40 text-blue-300 inline-flex items-center justify-center text-[10px] font-bold">2</span>
+                  Buka menu Firebase Console:
+                  <a
+                    href={firebaseSettingsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-400 hover:text-blue-300 underline font-semibold inline-flex items-center gap-1"
+                  >
+                    <span>Firebase Auth &gt; Settings &gt; Authorized domains</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </p>
+                <p className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-blue-600/40 text-blue-300 inline-flex items-center justify-center text-[10px] font-bold">3</span>
+                  Klik <strong>"Add domain"</strong>, tempel (paste) domain di atas, lalu klik <strong>"Done"</strong>.
+                </p>
+              </div>
+
+              <div className="pt-1 text-[10px] text-slate-400 border-t border-slate-800 flex items-center justify-between">
+                <span>Setelah disimpan di Firebase Console, klik ulang tombol hijau di atas!</span>
+                <span className="text-emerald-400 font-semibold">Instan aktif tanpa reload</span>
+              </div>
+            </div>
           )}
         </div>
       </div>
