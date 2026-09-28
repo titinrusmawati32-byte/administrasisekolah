@@ -173,13 +173,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   return (
     <aside
-      className={`bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800/90 select-none relative transition-all duration-300 ease-in-out ${
-        isMobileDrawer
-          ? 'w-full'
-          : isCollapsed
-          ? 'w-[72px]'
-          : 'w-[260px]'
-      }`}
+      className="w-full bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800/90 select-none relative transition-all duration-300 ease-in-out"
     >
       {/* 1. SIDEBAR HEADER */}
       <div
