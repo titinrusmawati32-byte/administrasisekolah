@@ -1,0 +1,317 @@
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  increment,
+  addDoc
+} from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, storage } from './firebase';
+import { SchoolDocument, DownloadRecord, DocumentStatus, AccessLevel } from '../types';
+import { logActivity } from './activityService';
+
+import { uploadFileToGoogleDrive, deleteFileFromGoogleDrive } from './googleDriveService';
+
+export interface CreateDocumentInput {
+  title: string;
+  description: string;
+  categoryId: string;
+  categoryName?: string;
+  subcategoryId?: string;
+  file?: File | null;
+  fileUrlFallback?: string;
+  googleAccessToken?: string | null;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  year: string;
+  semester: string;
+  status: DocumentStatus;
+  accessLevel: AccessLevel;
+  remarks?: string;
+  uploadedBy: string;
+  uploadedByName: string;
+}
+
+export async function uploadDocument(
+  input: CreateDocumentInput,
+  onProgress?: (progress: number) => void
+): Promise<SchoolDocument> {
+  const documentId = `doc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  let finalFileUrl = input.fileUrlFallback || '';
+  let storagePath = '';
+
+  if (input.file) {
+    // 1. Try Google Drive API Upload first if Access Token is provided
+    if (input.googleAccessToken) {
+      try {
+        const driveResult = await uploadFileToGoogleDrive(
+          input.file,
+          input.googleAccessToken,
+          input.categoryName || 'Administrasi',
+          onProgress
+        );
+        finalFileUrl = driveResult.webContentLink || driveResult.webViewLink;
+        storagePath = `drive:${driveResult.fileId}`;
+      } catch (driveErr) {
+        console.warn('Google Drive upload failed, falling back to Firebase Storage/Local:', driveErr);
+      }
+    }
+
+    // 2. Fallback to Firebase Storage if finalFileUrl is still empty
+    if (!finalFileUrl) {
+      const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      storagePath = `documents/${input.categoryId}/${documentId}/${safeName}`;
+      const storageRef = ref(storage, storagePath);
+
+      try {
+        const uploadTask = uploadBytesResumable(storageRef, input.file);
+
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+              if (onProgress) onProgress(pct);
+            },
+            (error) => {
+              console.warn('Storage upload error, falling back to local object URL:', error);
+              if (input.file) {
+                finalFileUrl = URL.createObjectURL(input.file);
+              }
+              resolve();
+            },
+            async () => {
+              finalFileUrl = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve();
+            }
+          );
+        });
+      } catch (err) {
+        console.warn('Fallback to local file handling:', err);
+        if (input.file && !finalFileUrl) {
+          finalFileUrl = URL.createObjectURL(input.file);
+        }
+      }
+    }
+  }
+
+  const now = new Date().toISOString();
+
+  const newDoc: SchoolDocument = {
+    documentId,
+    title: input.title,
+    description: input.description || '',
+    categoryId: input.categoryId,
+    categoryName: input.categoryName || '',
+    subcategoryId: input.subcategoryId || '',
+    fileName: input.fileName || (input.file ? input.file.name : 'Dokumen.pdf'),
+    fileUrl: finalFileUrl,
+    storagePath,
+    fileType: input.fileType || 'pdf',
+    fileSize: input.fileSize || (input.file ? input.file.size : 1024),
+    year: input.year || new Date().getFullYear().toString(),
+    semester: input.semester || '1',
+    uploadedBy: input.uploadedBy,
+    uploadedByName: input.uploadedByName,
+    uploadedAt: now,
+    updatedAt: now,
+    downloadCount: 0,
+    status: input.status || 'Published',
+    accessLevel: input.accessLevel || 'semua',
+    remarks: input.remarks || ''
+  };
+
+  await setDoc(doc(db, 'documents', documentId), newDoc);
+
+  // Log activity
+  await logActivity(
+    input.uploadedBy,
+    input.uploadedByName,
+    '',
+    'UPLOAD_DOC',
+    documentId,
+    input.title
+  );
+
+  return newDoc;
+}
+
+export async function getAllDocuments(): Promise<SchoolDocument[]> {
+  try {
+    const q = query(collection(db, 'documents'), orderBy('uploadedAt', 'desc'));
+    const snap = await getDocs(q);
+    const docs: SchoolDocument[] = [];
+    snap.forEach((d) => {
+      docs.push(d.data() as SchoolDocument);
+    });
+    return docs;
+  } catch (err) {
+    console.error('Error fetching documents:', err);
+    return [];
+  }
+}
+
+export async function getPublishedDocuments(): Promise<SchoolDocument[]> {
+  try {
+    const q = query(
+      collection(db, 'documents'),
+      where('status', '==', 'Published'),
+      orderBy('uploadedAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    const docs: SchoolDocument[] = [];
+    snap.forEach((d) => {
+      docs.push(d.data() as SchoolDocument);
+    });
+    return docs;
+  } catch (err) {
+    // Fallback if composite index missing
+    const all = await getAllDocuments();
+    return all.filter((d) => d.status === 'Published');
+  }
+}
+
+export async function getDocumentById(documentId: string): Promise<SchoolDocument | null> {
+  try {
+    const dRef = doc(db, 'documents', documentId);
+    const snap = await getDoc(dRef);
+    if (snap.exists()) {
+      return snap.data() as SchoolDocument;
+    }
+    return null;
+  } catch (err) {
+    console.error('Error getting document details:', err);
+    return null;
+  }
+}
+
+export async function updateDocumentDetails(
+  documentId: string,
+  updates: Partial<SchoolDocument>,
+  updatedByUserId: string,
+  updatedByUserName: string
+): Promise<void> {
+  const dRef = doc(db, 'documents', documentId);
+  await updateDoc(dRef, {
+    ...updates,
+    updatedAt: new Date().toISOString()
+  });
+
+  await logActivity(
+    updatedByUserId,
+    updatedByUserName,
+    '',
+    'EDIT_DOC',
+    documentId,
+    updates.title || 'Dokumen'
+  );
+}
+
+export async function deleteDocumentRecord(
+  documentId: string,
+  deletedByUserId: string,
+  deletedByUserName: string
+): Promise<void> {
+  const docData = await getDocumentById(documentId);
+  if (docData && docData.storagePath) {
+    try {
+      const storageRef = ref(storage, docData.storagePath);
+      await deleteObject(storageRef);
+    } catch (err) {
+      console.warn('Could not delete storage file:', err);
+    }
+  }
+
+  await deleteDoc(doc(db, 'documents', documentId));
+
+  await logActivity(
+    deletedByUserId,
+    deletedByUserName,
+    '',
+    'DELETE_DOC',
+    documentId,
+    docData?.title || 'Dokumen'
+  );
+}
+
+export async function recordDocumentDownload(
+  docItem: SchoolDocument,
+  userId: string,
+  userName: string,
+  userEmail: string
+): Promise<void> {
+  try {
+    // 1. Increment download count in Firestore
+    const dRef = doc(db, 'documents', docItem.documentId);
+    await updateDoc(dRef, {
+      downloadCount: increment(1)
+    });
+
+    // 2. Add entry to downloads collection
+    const downloadId = `dl-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const record: DownloadRecord = {
+      downloadId,
+      documentId: docItem.documentId,
+      documentTitle: docItem.title,
+      userId,
+      userName,
+      userEmail,
+      downloadedAt: new Date().toISOString(),
+      fileName: docItem.fileName
+    };
+    await setDoc(doc(db, 'downloads', downloadId), record);
+
+    // 3. Log activity
+    await logActivity(
+      userId,
+      userName,
+      userEmail,
+      'DOWNLOAD_DOC',
+      docItem.documentId,
+      docItem.title
+    );
+  } catch (err) {
+    console.error('Error recording download:', err);
+  }
+}
+
+export async function getUserDownloadHistory(userId: string): Promise<DownloadRecord[]> {
+  try {
+    const q = query(
+      collection(db, 'downloads'),
+      where('userId', '==', userId)
+    );
+    const snap = await getDocs(q);
+    const records: DownloadRecord[] = [];
+    snap.forEach((d) => {
+      records.push(d.data() as DownloadRecord);
+    });
+    return records.sort((a, b) => new Date(b.downloadedAt).getTime() - new Date(a.downloadedAt).getTime());
+  } catch (err) {
+    console.error('Error getting download history:', err);
+    return [];
+  }
+}
+
+export async function getAllDownloadRecords(): Promise<DownloadRecord[]> {
+  try {
+    const q = query(collection(db, 'downloads'));
+    const snap = await getDocs(q);
+    const records: DownloadRecord[] = [];
+    snap.forEach((d) => {
+      records.push(d.data() as DownloadRecord);
+    });
+    return records.sort((a, b) => new Date(b.downloadedAt).getTime() - new Date(a.downloadedAt).getTime());
+  } catch (err) {
+    console.error('Error getting all download records:', err);
+    return [];
+  }
+}

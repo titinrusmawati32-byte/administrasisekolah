@@ -1,0 +1,488 @@
+import React, { useEffect, useState } from 'react';
+import { Users, UserPlus, Shield, GraduationCap, CheckCircle, XCircle, Pencil, Search, Lock } from 'lucide-react';
+import { getAllUsers, setUserStatus, updateUserProfile, createTeacherUser } from '../../services/userService';
+import { UserProfile, UserRole, UserStatus } from '../../types';
+import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { Modal } from '../../components/common/Modal';
+import { SearchBar } from '../../components/common/SearchBar';
+import { Toast, ToastType } from '../../components/common/Toast';
+import { auth } from '../../services/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+
+export const AdminUserList: React.FC = () => {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'semua' | 'guru' | 'admin'>('semua');
+
+  // Add Teacher Modal
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newNip, setNewNip] = useState('');
+  const [newNuptk, setNewNuptk] = useState('');
+  const [newPosition, setNewPosition] = useState('Guru Kelas');
+  const [newPhone, setNewPhone] = useState('');
+
+  // Edit Teacher Modal
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const list = await getAllUsers();
+      setUsers(list);
+    } catch (err) {
+      console.error('Error fetching user list:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleCreateTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail || !newPassword || !newName) {
+      setToast({ message: 'Email, Password, dan Nama wajib diisi.', type: 'error' });
+      return;
+    }
+
+    setSaving(true);
+    const cleanedEmail = newEmail.trim().toLowerCase();
+    try {
+      let teacherUid = `guru-${cleanedEmail.replace(/[^a-z0-9]/g, '_')}`;
+
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, cleanedEmail, newPassword);
+        if (userCred.user) {
+          teacherUid = userCred.user.uid;
+        }
+      } catch (authErr: any) {
+        console.warn('Firebase Auth user creation note:', authErr?.code || authErr?.message);
+        // Fallback UID if Auth Email/Password provider isn't enabled
+      }
+
+      await createTeacherUser({
+        uid: teacherUid,
+        name: newName.trim(),
+        email: cleanedEmail,
+        nip: newNip.trim(),
+        nuptk: newNuptk.trim(),
+        position: newPosition.trim(),
+        phone: newPhone.trim(),
+        role: 'guru'
+      });
+
+      setToast({ message: 'Akun guru baru berhasil ditambahkan.', type: 'success' });
+      setAddModalOpen(false);
+      // Reset form
+      setNewEmail('');
+      setNewPassword('');
+      setNewName('');
+      setNewNip('');
+      setNewNuptk('');
+      setNewPhone('');
+      await loadUsers();
+    } catch (err: any) {
+      console.error('Error creating user:', err);
+      let msg = 'Gagal membuat pengguna.';
+      if (err.code === 'auth/email-already-in-use') {
+        msg = 'Email sudah terdaftar di sistem.';
+      } else if (err.code === 'auth/weak-password') {
+        msg = 'Password terlalu lemah. Penggunaan minimal 6 karakter.';
+      }
+      setToast({ message: msg, type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleStatus = async (user: UserProfile) => {
+    const newStatus: UserStatus = user.status === 'aktif' ? 'nonaktif' : 'aktif';
+    try {
+      await setUserStatus(user.uid, newStatus);
+      setToast({
+        message: `Status pengguna ${user.name} diubah menjadi ${newStatus}.`,
+        type: 'success'
+      });
+      await loadUsers();
+    } catch (err) {
+      setToast({ message: 'Gagal mengubah status pengguna.', type: 'error' });
+    }
+  };
+
+  const handleEditOpen = (user: UserProfile) => {
+    setEditingUser(user);
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setSaving(true);
+    try {
+      await updateUserProfile(editingUser.uid, {
+        name: editingUser.name,
+        nip: editingUser.nip,
+        nuptk: editingUser.nuptk,
+        position: editingUser.position,
+        phone: editingUser.phone
+      });
+      setToast({ message: 'Data pengguna berhasil diperbarui.', type: 'success' });
+      setEditModalOpen(false);
+      await loadUsers();
+    } catch (err) {
+      setToast({ message: 'Gagal memperbarui pengguna.', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredUsers = users.filter((u) => {
+    if (roleFilter !== 'semua' && u.role !== roleFilter) return false;
+    const q = searchQuery.toLowerCase().trim();
+    if (q) {
+      const matchName = u.name.toLowerCase().includes(q);
+      const matchEmail = u.email.toLowerCase().includes(q);
+      const matchNip = u.nip?.toLowerCase().includes(q);
+      const matchPos = u.position?.toLowerCase().includes(q);
+      if (!matchName && !matchEmail && !matchNip && !matchPos) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Manajemen Pengguna & Guru</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Kelola data guru, administrator, serta status keaktifan akun dalam sistem.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setAddModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-200 transition-colors shrink-0"
+        >
+          <UserPlus className="w-4 h-4" />
+          Tambah Akun Guru Baru
+        </button>
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Cari nama, email, NIP, atau jabatan guru..."
+        />
+
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+          <span className="text-xs font-semibold text-slate-500">Filter Peran:</span>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as any)}
+            className="text-xs font-semibold bg-white border border-slate-200 rounded-xl p-2.5 focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="semua">Semua Peran</option>
+            <option value="guru">Guru / Pendidik</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Users Table */}
+      {loading ? (
+        <LoadingSpinner label="Memuat daftar pengguna..." />
+      ) : (
+        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="py-3 px-4">Pengguna</th>
+                  <th className="py-3 px-4">NIP / NUPTK</th>
+                  <th className="py-3 px-4">Jabatan</th>
+                  <th className="py-3 px-4">Peran</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                {filteredUsers.map((user) => (
+                  <tr key={user.uid} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 text-blue-600 font-bold flex items-center justify-center shrink-0">
+                          {user.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">{user.name}</p>
+                          <p className="text-[11px] text-slate-400">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
+                      {user.nip || user.nuptk || '-'}
+                    </td>
+
+                    <td className="py-3.5 px-4 text-slate-600">
+                      {user.position || 'Guru Kelas'}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      {user.role === 'admin' ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                          <Shield className="w-3 h-3 text-blue-600" />
+                          Admin
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <GraduationCap className="w-3 h-3 text-emerald-600" />
+                          Guru
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <button
+                        onClick={() => handleToggleStatus(user)}
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border transition-colors ${
+                          user.status === 'aktif'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                        }`}
+                      >
+                        {user.status === 'aktif' ? (
+                          <>
+                            <CheckCircle className="w-3 h-3 text-emerald-600" />
+                            Aktif
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3 text-rose-600" />
+                            Nonaktif
+                          </>
+                        )}
+                      </button>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => handleEditOpen(user)}
+                        className="px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Add Teacher Modal */}
+      <Modal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        title="Tambah Akun Guru / Tenaga Pendidik Baru"
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateTeacher} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Nama Lengkap *
+              </label>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="contoh: Budi Santoso, S.Pd."
+                required
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Email Sekolah *
+              </label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="guru@sekolah.sch.id"
+                required
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Password Awal *
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimal 6 karakter"
+                required
+                minLength={6}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Jabatan / Tugas</label>
+              <input
+                type="text"
+                value={newPosition}
+                onChange={(e) => setNewPosition(e.target.value)}
+                placeholder="contoh: Guru Kelas 4A / Guru PJOK"
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">NIP (Opsional)</label>
+              <input
+                type="text"
+                value={newNip}
+                onChange={(e) => setNewNip(e.target.value)}
+                placeholder="198501..."
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">NUPTK (Opsional)</label>
+              <input
+                type="text"
+                value={newNuptk}
+                onChange={(e) => setNewNuptk(e.target.value)}
+                placeholder="12345678..."
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setAddModalOpen(false)}
+              disabled={saving}
+              className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md"
+            >
+              {saving ? 'Menyimpan...' : 'Buat Akun Guru'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <Modal
+          isOpen={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          title={`Edit Data Guru - ${editingUser.name}`}
+          maxWidth="lg"
+        >
+          <form onSubmit={handleUpdateUser} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                <input
+                  type="text"
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Jabatan / Tugas</label>
+                <input
+                  type="text"
+                  value={editingUser.position || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, position: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">NIP</label>
+                <input
+                  type="text"
+                  value={editingUser.nip || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, nip: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">NUPTK</label>
+                <input
+                  type="text"
+                  value={editingUser.nuptk || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, nuptk: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nomor HP / WhatsApp</label>
+                <input
+                  type="text"
+                  value={editingUser.phone || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-5 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md"
+              >
+                {saving ? 'Memperbarui...' : 'Simpan Perubahan'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
+    </div>
+  );
+};

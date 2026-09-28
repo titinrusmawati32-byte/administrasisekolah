@@ -1,0 +1,131 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "User profiles for Admin and Teachers (Guru)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "guru"] },
+        "nip": { "type": "string" },
+        "nuptk": { "type": "string" },
+        "position": { "type": "string" },
+        "phone": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "status": { "type": "string", "enum": ["aktif", "nonaktif"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role", "name"]
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "School administration documents",
+      "type": "object",
+      "properties": {
+        "documentId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "subcategoryId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "storagePath": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileSize": { "type": "number" },
+        "thumbnailUrl": { "type": "string" },
+        "year": { "type": "string" },
+        "semester": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "uploadedByName": { "type": "string" },
+        "uploadedAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "downloadCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Published", "Draft", "Archived"] },
+        "accessLevel": { "type": "string", "enum": ["semua", "guru", "admin"] }
+      },
+      "required": ["title", "categoryId", "fileName", "fileUrl", "status"]
+    },
+    "categories": {
+      "title": "Categories",
+      "description": "Document categories",
+      "type": "object",
+      "properties": {
+        "categoryId": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "description": { "type": "string" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "downloads": {
+      "title": "Downloads",
+      "description": "Download history records",
+      "type": "object",
+      "properties": {
+        "downloadId": { "type": "string" },
+        "documentId": { "type": "string" },
+        "documentTitle": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "downloadedAt": { "type": "string" },
+        "fileName": { "type": "string" }
+      },
+      "required": ["documentId", "userId", "downloadedAt"]
+    },
+    "activityLogs": {
+      "title": "Activity Logs",
+      "description": "User actions and activity logs",
+      "type": "object",
+      "properties": {
+        "activityId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "documentId": { "type": "string" },
+        "documentName": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["userId", "action", "timestamp"]
+    },
+    "announcements": {
+      "title": "Announcements",
+      "description": "School announcements for teachers and staff",
+      "type": "object",
+      "properties": {
+        "announcementId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdByName": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "archived"] }
+      },
+      "required": ["title", "content", "status"]
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "School settings document",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "npsn": { "type": "string" },
+        "address": { "type": "string" },
+        "logo": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "website": { "type": "string" },
+        "principalName": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    }
+  }
+}
