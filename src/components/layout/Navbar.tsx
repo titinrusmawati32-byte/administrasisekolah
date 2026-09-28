@@ -1,12 +1,18 @@
 import React from 'react';
-import { Menu, School, ShieldCheck, GraduationCap } from 'lucide-react';
+import { Menu, School, ShieldCheck, GraduationCap, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface NavbarProps {
   onToggleMobileMenu: () => void;
+  onToggleDesktopCollapse?: () => void;
+  isDesktopCollapsed?: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  onToggleMobileMenu,
+  onToggleDesktopCollapse,
+  isDesktopCollapsed = false
+}) => {
   const { userProfile, schoolSettings, isAdmin } = useAuth();
 
   return (
@@ -14,12 +20,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Hamburger Button (Touch friendly min 44px) */}
         <button
+          type="button"
           onClick={onToggleMobileMenu}
-          className="lg:hidden min-h-[44px] min-w-[44px] -ml-1 p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors flex items-center justify-center cursor-pointer"
-          aria-label="Buka menu navigasi"
+          className="lg:hidden min-h-[44px] min-w-[44px] -ml-1 p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors flex items-center justify-center cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
+          aria-label="Open navigation"
         >
           <Menu className="w-5 h-5" />
         </button>
+
+        {/* Desktop Sidebar Toggle Button (>= 1024px for Admin) */}
+        {isAdmin && onToggleDesktopCollapse && (
+          <button
+            type="button"
+            onClick={onToggleDesktopCollapse}
+            className="hidden lg:flex min-h-[38px] min-w-[38px] p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors items-center justify-center cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500"
+            aria-label={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isDesktopCollapsed ? (
+              <PanelLeftOpen className="w-5 h-5 text-slate-700" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5 text-slate-700" />
+            )}
+          </button>
+        )}
 
         {/* School Name & Branding Header */}
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">

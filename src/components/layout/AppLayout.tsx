@@ -11,6 +11,25 @@ export const AppLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { loading, isAdmin } = useAuth();
 
+  // Collapsible sidebar state with localStorage persistence
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('admin_sidebar_collapsed');
+      if (saved !== null) {
+        return saved === 'true';
+      }
+    }
+    return false;
+  });
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('admin_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
   if (loading) {
     return <LoadingSpinner fullPage label="Memuat sistem administrasi sekolah..." />;
   }
@@ -18,8 +37,23 @@ export const AppLayout: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden text-slate-800 font-sans">
       {/* Desktop Sidebar (Permanent >= 1024px) */}
-      <div className="hidden lg:block h-full shrink-0">
-        {isAdmin ? <AdminSidebar /> : <TeacherSidebar />}
+      <div
+        className={`hidden lg:block h-full shrink-0 transition-[width] duration-300 ease-in-out ${
+          isAdmin
+            ? sidebarCollapsed
+              ? 'w-[72px]'
+              : 'w-[260px]'
+            : 'w-[260px]'
+        }`}
+      >
+        {isAdmin ? (
+          <AdminSidebar
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={toggleSidebarCollapsed}
+          />
+        ) : (
+          <TeacherSidebar />
+        )}
       </div>
 
       {/* Mobile Drawer Overlay (< 1024px) */}
@@ -30,9 +64,12 @@ export const AppLayout: React.FC = () => {
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
-          <div className="relative z-10 w-72 max-w-[85vw] h-full shadow-2xl animate-in slide-in-from-left duration-250">
+          <div className="relative z-10 w-[270px] max-w-[85vw] h-full shadow-2xl animate-in slide-in-from-left duration-250">
             {isAdmin ? (
-              <AdminSidebar onCloseMobile={() => setMobileMenuOpen(false)} />
+              <AdminSidebar
+                onCloseMobile={() => setMobileMenuOpen(false)}
+                isMobileDrawer={true}
+              />
             ) : (
               <TeacherSidebar onCloseMobile={() => setMobileMenuOpen(false)} />
             )}
@@ -40,12 +77,16 @@ export const AppLayout: React.FC = () => {
         </div>
       )}
 
-      {/* Main Content Area */}
+      {/* Main Content Area (Naturally expands/shrinks as sidebar collapses/expands) */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-        <Navbar onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
+        <Navbar
+          onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onToggleDesktopCollapse={toggleSidebarCollapsed}
+          isDesktopCollapsed={sidebarCollapsed}
+        />
 
         {/* Scrollable Container with Mobile-First padding & bottom-bar clearance */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 md:p-6 pb-24 lg:pb-8 bg-slate-50">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-5 md:p-6 pb-24 lg:pb-8 bg-slate-50 transition-all duration-300">
           <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
             <Outlet />
           </div>
@@ -57,4 +98,3 @@ export const AppLayout: React.FC = () => {
     </div>
   );
 };
-
