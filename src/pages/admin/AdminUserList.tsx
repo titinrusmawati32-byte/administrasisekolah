@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, UserPlus, Shield, GraduationCap, CheckCircle, XCircle, Pencil, Trash2, Search, Lock, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Shield, GraduationCap, CheckCircle, XCircle, Pencil, Trash2, Search, Lock, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { getAllUsers, setUserStatus, updateUserProfile, createTeacherUser, deleteUserRecord } from '../../services/userService';
 import { UserProfile, UserRole, UserStatus } from '../../types';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -15,19 +15,19 @@ export const AdminUserList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'semua' | 'guru' | 'admin'>('semua');
 
-  // Add Teacher Modal
+  // Add Teacher Modal (Nama Lengkap, Password Simple, Jabatan, NIP)
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
-  const [newNip, setNewNip] = useState('');
-  const [newNuptk, setNewNuptk] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [newPosition, setNewPosition] = useState('Guru Kelas');
-  const [newPhone, setNewPhone] = useState('');
+  const [newNip, setNewNip] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Edit Teacher Modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editPassword, setEditPassword] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
 
   // Delete Teacher Modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -55,24 +55,33 @@ export const AdminUserList: React.FC = () => {
 
   const handleCreateTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail || !newPassword || !newName) {
-      setToast({ message: 'Email, Password, dan Nama wajib diisi.', type: 'error' });
+    if (!newName.trim() || !newPassword.trim()) {
+      setToast({ message: 'Nama Lengkap dan Password wajib diisi.', type: 'error' });
       return;
     }
 
     setSaving(true);
-    const cleanedEmail = newEmail.trim().toLowerCase();
+    // Generate clean identifier & email from NIP or Name
+    const nipClean = newNip.trim().replace(/[^0-9a-zA-Z]/g, '');
+    const nameSlug = newName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanedEmail = nipClean 
+      ? `${nipClean.toLowerCase()}@sekolah.sch.id` 
+      : `${nameSlug || 'guru_' + Date.now().toString().slice(-4)}@sekolah.sch.id`;
+
     try {
       let teacherUid = `guru-${cleanedEmail.replace(/[^a-z0-9]/g, '_')}`;
 
       try {
-        const userCred = await createUserWithEmailAndPassword(auth, cleanedEmail, newPassword);
+        const userCred = await createUserWithEmailAndPassword(
+          auth,
+          cleanedEmail,
+          newPassword.length >= 6 ? newPassword : `${newPassword}123456`
+        );
         if (userCred.user) {
           teacherUid = userCred.user.uid;
         }
       } catch (authErr: any) {
         console.warn('Firebase Auth user creation note:', authErr?.code || authErr?.message);
-        // Fallback UID if Auth Email/Password provider isn't enabled
       }
 
       await createTeacherUser({
@@ -80,35 +89,36 @@ export const AdminUserList: React.FC = () => {
         name: newName.trim(),
         email: cleanedEmail,
         nip: newNip.trim(),
-        nuptk: newNuptk.trim(),
-        position: newPosition.trim(),
-        phone: newPhone.trim(),
+        nuptk: '',
+        position: newPosition.trim() || 'Guru Kelas',
+        phone: '',
         role: 'guru'
       });
 
       try {
         const userPasswords: Record<string, string> = JSON.parse(localStorage.getItem('user_passwords_v1') || '{}');
         userPasswords[cleanedEmail] = newPassword;
+        if (newNip.trim()) {
+          userPasswords[newNip.trim()] = newPassword;
+        }
+        userPasswords[newName.trim().toLowerCase()] = newPassword;
         localStorage.setItem('user_passwords_v1', JSON.stringify(userPasswords));
       } catch (e) {}
 
-      setToast({ message: 'Akun guru baru berhasil ditambahkan.', type: 'success' });
+      setToast({ message: `Akun guru "${newName.trim()}" berhasil ditambahkan.`, type: 'success' });
       setAddModalOpen(false);
       // Reset form
-      setNewEmail('');
       setNewPassword('');
       setNewName('');
       setNewNip('');
-      setNewNuptk('');
-      setNewPhone('');
+      setNewPosition('Guru Kelas');
+      setShowPassword(false);
       await loadUsers();
     } catch (err: any) {
       console.error('Error creating user:', err);
       let msg = 'Gagal membuat pengguna.';
       if (err.code === 'auth/email-already-in-use') {
-        msg = 'Email sudah terdaftar di sistem.';
-      } else if (err.code === 'auth/weak-password') {
-        msg = 'Password terlalu lemah. Penggunaan minimal 6 karakter.';
+        msg = 'NIP atau Nama guru ini sudah pernah didaftarkan.';
       }
       setToast({ message: msg, type: 'error' });
     } finally {
@@ -132,6 +142,8 @@ export const AdminUserList: React.FC = () => {
 
   const handleEditOpen = (user: UserProfile) => {
     setEditingUser(user);
+    setEditPassword('');
+    setShowEditPassword(false);
     setEditModalOpen(true);
   };
 
@@ -143,11 +155,22 @@ export const AdminUserList: React.FC = () => {
       await updateUserProfile(editingUser.uid, {
         name: editingUser.name,
         nip: editingUser.nip,
-        nuptk: editingUser.nuptk,
-        position: editingUser.position,
-        phone: editingUser.phone
+        position: editingUser.position
       });
-      setToast({ message: 'Data pengguna berhasil diperbarui.', type: 'success' });
+
+      if (editPassword.trim()) {
+        try {
+          const userPasswords: Record<string, string> = JSON.parse(localStorage.getItem('user_passwords_v1') || '{}');
+          userPasswords[editingUser.email.toLowerCase()] = editPassword.trim();
+          if (editingUser.nip) {
+            userPasswords[editingUser.nip.trim()] = editPassword.trim();
+          }
+          userPasswords[editingUser.name.trim().toLowerCase()] = editPassword.trim();
+          localStorage.setItem('user_passwords_v1', JSON.stringify(userPasswords));
+        } catch (e) {}
+      }
+
+      setToast({ message: 'Data guru berhasil diperbarui.', type: 'success' });
       setEditModalOpen(false);
       await loadUsers();
     } catch (err) {
@@ -337,7 +360,7 @@ export const AdminUserList: React.FC = () => {
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                     <th className="py-3 px-4">Pengguna</th>
-                    <th className="py-3 px-4">NIP / NUPTK</th>
+                    <th className="py-3 px-4">NIP</th>
                     <th className="py-3 px-4">Jabatan</th>
                     <th className="py-3 px-4">Peran</th>
                     <th className="py-3 px-4">Status</th>
@@ -360,7 +383,7 @@ export const AdminUserList: React.FC = () => {
                       </td>
 
                       <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
-                        {user.nip || user.nuptk || '-'}
+                        {user.nip || '-'}
                       </td>
 
                       <td className="py-3.5 px-4 text-slate-600">
@@ -438,10 +461,11 @@ export const AdminUserList: React.FC = () => {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         title="Tambah Akun Guru / Tenaga Pendidik Baru"
-        maxWidth="lg"
+        maxWidth="md"
       >
         <form onSubmit={handleCreateTeacher} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-3.5">
+            {/* 1. Nama Lengkap */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Nama Lengkap *
@@ -452,71 +476,70 @@ export const AdminUserList: React.FC = () => {
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="contoh: Budi Santoso, S.Pd."
                 required
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full min-h-[42px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
               />
             </div>
 
+            {/* 2. Password Simple */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Email Sekolah *
+                Password (Kata Sandi) *
               </label>
-              <input
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="guru@sekolah.sch.id"
-                required
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="contoh: 123456 atau guru123"
+                  required
+                  className="w-full min-h-[42px] pl-3.5 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Password sederhana yang mudah diingat guru saat masuk ke sistem (misal: 123456).
+              </p>
             </div>
 
+            {/* 3. Jabatan / Tugas */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Password Awal *
+                Jabatan / Tugas *
               </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Minimal 6 karakter"
-                required
-                minLength={6}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Jabatan / Tugas</label>
               <input
                 type="text"
                 value={newPosition}
                 onChange={(e) => setNewPosition(e.target.value)}
-                placeholder="contoh: Guru Kelas 4A / Guru PJOK"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="contoh: Guru Kelas / Guru PJOK / Guru Agama"
+                required
+                className="w-full min-h-[42px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
               />
             </div>
 
+            {/* 4. NIP */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">NIP (Opsional)</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                NIP (Nomor Induk Pegawai)
+              </label>
               <input
                 type="text"
                 value={newNip}
                 onChange={(e) => setNewNip(e.target.value)}
-                placeholder="198501..."
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="contoh: 19850123... (opsional jika belum PNS/PPPK)"
+                className="w-full min-h-[42px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">NUPTK (Opsional)</label>
-              <input
-                type="text"
-                value={newNuptk}
-                onChange={(e) => setNewNuptk(e.target.value)}
-                placeholder="12345678..."
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
+          <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl text-[11px] text-blue-800">
+            Guru dapat masuk ke aplikasi menggunakan <strong>NIP</strong> atau <strong>Nama Lengkap</strong> dengan password di atas.
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
@@ -545,58 +568,65 @@ export const AdminUserList: React.FC = () => {
           isOpen={editModalOpen}
           onClose={() => setEditModalOpen(false)}
           title={`Edit Data Guru - ${editingUser.name}`}
-          maxWidth="lg"
+          maxWidth="md"
         >
           <form onSubmit={handleUpdateUser} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap *</label>
                 <input
                   type="text"
                   value={editingUser.name}
                   onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                  required
+                  className="w-full min-h-[42px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Jabatan / Tugas</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Jabatan / Tugas *</label>
                 <input
                   type="text"
                   value={editingUser.position || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, position: e.target.value })}
-                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                  required
+                  placeholder="contoh: Guru Kelas 4A"
+                  className="w-full min-h-[42px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">NIP</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">NIP (Nomor Induk Pegawai)</label>
                 <input
                   type="text"
                   value={editingUser.nip || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, nip: e.target.value })}
-                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                  placeholder="contoh: 19850123..."
+                  className="w-full min-h-[42px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">NUPTK</label>
-                <input
-                  type="text"
-                  value={editingUser.nuptk || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, nuptk: e.target.value })}
-                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nomor HP / WhatsApp</label>
-                <input
-                  type="text"
-                  value={editingUser.phone || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
-                  className="w-full min-h-[40px] px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
-                />
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Reset Password Baru (Opsional)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showEditPassword ? 'text' : 'password'}
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Kosongkan jika password tidak ingin diubah"
+                    className="w-full min-h-[42px] pl-3.5 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword(!showEditPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                    aria-label={showEditPassword ? 'Sembunyikan password' : 'Lihat password'}
+                  >
+                    {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
 

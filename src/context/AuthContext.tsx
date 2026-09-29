@@ -213,15 +213,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isAdminIdentifier = cleanedEmail === 'admin' || cleanedEmail === 'admin@sekolah.sch.id';
     if (isAdminIdentifier) {
       cleanedEmail = 'admin@sekolah.sch.id';
+    } else {
+      // Check if user entered NIP or Name
+      try {
+        const cached = localStorage.getItem('cached_users_v2');
+        if (cached) {
+          const registeredUsers: UserProfile[] = JSON.parse(cached);
+          const found = registeredUsers.find(
+            (u) =>
+              (u.nip && u.nip.trim() === rawInput) ||
+              u.email.toLowerCase() === cleanedEmail ||
+              u.name.trim().toLowerCase() === rawInput.toLowerCase()
+          );
+          if (found) {
+            cleanedEmail = found.email.toLowerCase();
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
     }
 
     const isAdmin = isAdminIdentifier || cleanedEmail.includes('admin') || cleanedEmail.includes('frezafa20@gmail.com');
 
     // 0. Check if account was deleted by Admin
-    if (!isAdmin && isUserEmailDeleted(cleanedEmail)) {
-      const deletedMsg = 'Akun Anda telah dihapus oleh Administrator. Silakan hubungi Admin untuk dibuatkan kembali.';
-      setAuthError(deletedMsg);
-      throw new Error(deletedMsg);
+    if (!isAdmin) {
+      // Check if user exists in cached users, if so clear any erroneous deleted flag
+      try {
+        const cached = localStorage.getItem('cached_users_v2');
+        if (cached) {
+          const registeredUsers: UserProfile[] = JSON.parse(cached);
+          const found = registeredUsers.find(
+            (u) => u.email.toLowerCase() === cleanedEmail || (u.nip && u.nip.trim() === rawInput)
+          );
+          if (found) {
+            const deletedList: string[] = JSON.parse(localStorage.getItem('deleted_user_emails_v2') || '[]');
+            const updatedDeleted = deletedList.filter((e) => e !== found.email.toLowerCase());
+            localStorage.setItem('deleted_user_emails_v2', JSON.stringify(updatedDeleted));
+          }
+        }
+      } catch (e) {}
+
+      if (isUserEmailDeleted(cleanedEmail)) {
+        const deletedMsg = 'Akun Anda telah dihapus oleh Administrator. Silakan hubungi Admin untuk dibuatkan kembali.';
+        setAuthError(deletedMsg);
+        throw new Error(deletedMsg);
+      }
     }
 
     const handleFallbackSession = async (roleOverride?: 'admin' | 'guru') => {
@@ -309,7 +346,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 2. Validate saved teacher passwords if any
     try {
       const userPasswords: Record<string, string> = JSON.parse(localStorage.getItem('user_passwords_v1') || '{}');
-      if (userPasswords[cleanedEmail] && userPasswords[cleanedEmail] !== pass) {
+      const expectedPass = userPasswords[cleanedEmail] || userPasswords[rawInput] || userPasswords[rawInput.toLowerCase()];
+      if (expectedPass && expectedPass !== pass) {
         const err = new Error('Kata sandi salah. Silakan periksa kembali kata sandi Anda.');
         setAuthError(err.message);
         throw err;

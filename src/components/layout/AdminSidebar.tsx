@@ -228,10 +228,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 )}
               </div>
               <div className="overflow-hidden min-w-0">
-                <h1 className="text-xs sm:text-sm font-bold text-white tracking-tight truncate leading-tight">
+                <h1 className="text-sm font-semibold text-white tracking-tight truncate leading-tight">
                   {schoolSettings?.name || 'PUSAT ADMINISTRASI'}
                 </h1>
-                <p className="text-[10px] text-blue-400 font-semibold tracking-wider uppercase mt-0.5 truncate">
+                <p className="text-[11px] text-blue-400 font-medium tracking-wider uppercase mt-0.5 truncate">
                   ADMINISTRATOR
                 </p>
               </div>
@@ -276,7 +276,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             {isCollapsed ? (
               groupIdx > 0 && <div className="border-t border-slate-800/80 my-2 mx-1" />
             ) : (
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 pt-1 pb-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 px-3 pt-2 pb-1">
                 {group.groupTitle}
               </p>
             )}
@@ -296,14 +296,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                   onBlur={hideTooltip}
                   aria-label={item.label}
                   className={({ isActive }) =>
-                    `group relative flex items-center transition-all duration-200 rounded-xl text-xs font-semibold focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                    `group relative flex items-center transition-all duration-200 rounded-xl text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 ${
                       isCollapsed
                         ? 'w-11 h-11 mx-auto justify-center'
                         : 'w-full px-3 py-2.5 min-h-[42px] gap-3 justify-between'
                     } ${
                       isActive
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/80 active:bg-slate-800'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-semibold'
+                        : 'text-slate-400 font-medium hover:text-white hover:bg-slate-800/80 active:bg-slate-800'
                     }`
                   }
                 >
@@ -319,7 +319,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
                         {/* Collapsed Badge (Stays neatly anchored to icon inside 72px) */}
                         {isCollapsed && item.badge !== undefined && (
-                          <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full text-[9px] font-extrabold flex items-center justify-center bg-blue-500 text-white ring-2 ring-slate-900 shadow-sm pointer-events-none">
+                          <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center bg-blue-500 text-white ring-2 ring-slate-900 shadow-sm pointer-events-none">
                             {item.badge}
                           </span>
                         )}
@@ -331,7 +331,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                           <span className="truncate">{item.label}</span>
                           {item.badge !== undefined && (
                             <span
-                              className={`ml-2 px-2 py-0.5 text-[10px] font-bold rounded-full shrink-0 ${
+                              className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full shrink-0 ${
                                 isActive
                                   ? 'bg-white/20 text-white'
                                   : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
@@ -361,7 +361,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           // Collapsed Footer View
           <>
             <div
-              className="w-9 h-9 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold shrink-0 border border-blue-500/30 cursor-default"
+              className="w-9 h-9 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-semibold shrink-0 border border-blue-500/30 cursor-default"
               onMouseEnter={(e) =>
                 showTooltip(userProfile?.name || 'Administrator Sekolah', undefined, e.currentTarget)
               }
@@ -402,7 +402,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           // Expanded Footer View
           <>
             <div className="flex items-center gap-3 px-1">
-              <div className="w-9 h-9 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold shrink-0 border border-blue-500/30 overflow-hidden">
+              <div className="w-9 h-9 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-semibold shrink-0 border border-blue-500/30 overflow-hidden">
                 {userProfile?.photoURL ? (
                   <img
                     src={userProfile.photoURL}
@@ -414,10 +414,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 )}
               </div>
               <div className="overflow-hidden min-w-0">
-                <p className="text-xs font-bold text-white truncate">
+                <p className="text-sm font-semibold text-white truncate">
                   {userProfile?.name || 'Administrator Sekolah'}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate">
+                <p className="text-xs font-normal text-slate-400 truncate">
                   {userProfile?.email || 'admin@sekolah.sch.id'}
                 </p>
               </div>
@@ -426,7 +426,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-semibold transition-colors min-h-[42px] cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-rose-500"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-sm font-semibold transition-colors min-h-[42px] cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-rose-500"
               aria-label="Keluar (Logout)"
             >
               <LogOut className="w-4 h-4 shrink-0" />
@@ -440,14 +440,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       {isCollapsed && tooltip && (
         <div
           style={{ top: `${tooltip.top}px`, left: `${tooltip.left}px` }}
-          className="fixed z-[100] -translate-y-1/2 flex items-center gap-2 bg-slate-900 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700/90 shadow-xl shadow-black/50 pointer-events-none whitespace-nowrap animate-in fade-in zoom-in-95 duration-150"
+          className="fixed z-[100] -translate-y-1/2 flex items-center gap-2 bg-slate-900 text-slate-100 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700/90 shadow-xl shadow-black/50 pointer-events-none whitespace-nowrap animate-in fade-in zoom-in-95 duration-150"
           role="tooltip"
         >
           {/* Arrow pointing to icon */}
           <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-900 border-l border-b border-slate-700/90 rotate-45" />
           <span>{tooltip.label}</span>
           {tooltip.badge !== undefined && (
-            <span className="px-1.5 py-0.5 rounded-md bg-blue-500/30 text-blue-300 text-[10px] font-bold">
+            <span className="px-1.5 py-0.5 rounded-md bg-blue-500/30 text-blue-300 text-[10px] font-semibold">
               {tooltip.badge}
             </span>
           )}
