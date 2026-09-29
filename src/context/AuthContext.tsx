@@ -214,16 +214,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isAdminIdentifier) {
       cleanedEmail = 'admin@sekolah.sch.id';
     } else {
-      // Check if user entered NIP or Name
+      // Check if user entered NIP or Name or email
       try {
         const cached = localStorage.getItem('cached_users_v2');
         if (cached) {
           const registeredUsers: UserProfile[] = JSON.parse(cached);
           const found = registeredUsers.find(
             (u) =>
-              (u.nip && u.nip.trim() === rawInput) ||
+              (u.nip && u.nip.trim().toLowerCase() === rawInput.toLowerCase()) ||
               u.email.toLowerCase() === cleanedEmail ||
-              u.name.trim().toLowerCase() === rawInput.toLowerCase()
+              u.name.trim().toLowerCase() === rawInput.toLowerCase() ||
+              u.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '') === rawInput.toLowerCase().replace(/[^a-z0-9]/g, '')
           );
           if (found) {
             cleanedEmail = found.email.toLowerCase();
@@ -238,13 +239,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 0. Check if account was deleted by Admin
     if (!isAdmin) {
-      // Check if user exists in cached users, if so clear any erroneous deleted flag
+      // Always remove any stale deleted flag if user exists in cache
       try {
         const cached = localStorage.getItem('cached_users_v2');
         if (cached) {
           const registeredUsers: UserProfile[] = JSON.parse(cached);
           const found = registeredUsers.find(
-            (u) => u.email.toLowerCase() === cleanedEmail || (u.nip && u.nip.trim() === rawInput)
+            (u) => u.email.toLowerCase() === cleanedEmail || (u.nip && u.nip.trim().toLowerCase() === rawInput.toLowerCase()) || u.name.trim().toLowerCase() === rawInput.toLowerCase()
           );
           if (found) {
             const deletedList: string[] = JSON.parse(localStorage.getItem('deleted_user_emails_v2') || '[]');
