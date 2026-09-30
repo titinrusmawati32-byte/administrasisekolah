@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, LayoutGrid, List, FileText } from 'lucide-react';
-import { getAllDocuments, deleteDocumentRecord, recordDocumentDownload } from '../../services/documentService';
+import { getAllDocuments, deleteDocumentRecord, recordDocumentDownload, getAllDownloadRecords } from '../../services/documentService';
 import { getCategories } from '../../services/categoryService';
+import { getAllUsers } from '../../services/userService';
+import { getActivityLogs } from '../../services/activityService';
+import { syncAllDataToGoogleSheets } from '../../services/googleSheetsService';
 import { SchoolDocument, Category } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -36,7 +39,7 @@ export const AdminDocumentList: React.FC = () => {
 
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, googleAccessToken } = useAuth();
   const navigate = useNavigate();
 
   const loadData = async () => {
@@ -103,8 +106,27 @@ export const AdminDocumentList: React.FC = () => {
         currentUser.uid,
         userProfile.name
       );
+
+      // Auto-sync to Google Sheets in background if spreadsheet was previously initialized
+      const spreadsheetId = localStorage.getItem('pas_school_spreadsheet_id');
+      if (spreadsheetId && googleAccessToken) {
+        const [remainingDocs, catData, users, downloads, logs] = await Promise.all([
+          getAllDocuments(),
+          getCategories(),
+          getAllUsers(),
+          getAllDownloadRecords(),
+          getActivityLogs(300)
+        ]);
+        await syncAllDataToGoogleSheets(googleAccessToken, {
+          documents: remainingDocs,
+          categories: catData,
+          users,
+          downloads,
+          logs
+        });
+      }
     } catch (err) {
-      console.warn('Background document delete:', err);
+      console.warn('Background document delete / sync:', err);
     }
   };
 

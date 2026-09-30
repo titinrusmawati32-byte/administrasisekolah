@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UploadCloud, File, X, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { getCategories } from '../../services/categoryService';
-import { uploadDocument } from '../../services/documentService';
+import { uploadDocument, getAllDocuments, getAllDownloadRecords } from '../../services/documentService';
+import { getAllUsers } from '../../services/userService';
+import { getActivityLogs } from '../../services/activityService';
+import { syncAllDataToGoogleSheets } from '../../services/googleSheetsService';
 import { Category, DocumentStatus, AccessLevel } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { FileIcon } from '../../components/common/FileIcon';
@@ -139,7 +142,30 @@ export const AdminDocumentCreate: React.FC = () => {
         (progress) => setUploadProgress(progress)
       );
 
-      setToast({ message: 'Dokumen berhasil diunggah!', type: 'success' });
+      // Auto-sync to Google Sheets in background if spreadsheet was previously initialized
+      try {
+        const spreadsheetId = localStorage.getItem('pas_school_spreadsheet_id');
+        if (spreadsheetId && googleAccessToken) {
+          const [documents, catData, users, downloads, logs] = await Promise.all([
+            getAllDocuments(),
+            getCategories(),
+            getAllUsers(),
+            getAllDownloadRecords(),
+            getActivityLogs(300)
+          ]);
+          await syncAllDataToGoogleSheets(googleAccessToken, {
+            documents,
+            categories: catData,
+            users,
+            downloads,
+            logs
+          });
+        }
+      } catch (syncErr) {
+        console.warn('Background Google Sheets auto-sync note:', syncErr);
+      }
+
+      setToast({ message: 'Dokumen berhasil diunggah & database Google Sheets tersinkron!', type: 'success' });
       setTimeout(() => {
         navigate('/admin/documents');
       }, 1000);
