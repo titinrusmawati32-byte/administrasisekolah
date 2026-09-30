@@ -49,73 +49,21 @@ export async function uploadDocument(
   let storagePath = '';
 
   if (input.file) {
-    // 1. Try Google Drive API Upload first if Access Token is provided
-    if (input.googleAccessToken) {
-      try {
-        const driveResult = await uploadFileToGoogleDrive(
-          input.file,
-          input.googleAccessToken,
-          input.categoryName || 'Administrasi',
-          onProgress
-        );
-        finalFileUrl = driveResult.webContentLink || driveResult.webViewLink;
-        storagePath = `drive:${driveResult.fileId}`;
-      } catch (driveErr) {
-        console.warn('Google Drive upload fallback to local/storage:', driveErr);
-      }
-    }
-
-    // 2. Fallback to Firebase Storage / Local URL if finalFileUrl is still empty
-    if (!finalFileUrl) {
-      const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      storagePath = `documents/${input.categoryId}/${documentId}/${safeName}`;
-      const storageRef = ref(storage, storagePath);
-
-      try {
-        const uploadTask = uploadBytesResumable(storageRef, input.file);
-
-        // Max 3.5-second wait for Firebase Storage upload
-        await new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => {
-            if (input.file && !finalFileUrl) {
-              finalFileUrl = URL.createObjectURL(input.file);
-            }
-            resolve();
-          }, 3500);
-
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-              const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-              if (onProgress) onProgress(pct);
-            },
-            (error) => {
-              clearTimeout(timeout);
-              if (input.file) {
-                finalFileUrl = URL.createObjectURL(input.file);
-              }
-              resolve();
-            },
-            async () => {
-              clearTimeout(timeout);
-              try {
-                finalFileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-              } catch (e) {
-                if (input.file) finalFileUrl = URL.createObjectURL(input.file);
-              }
-              resolve();
-            }
-          );
-        });
-      } catch (err) {
-        if (input.file && !finalFileUrl) {
-          finalFileUrl = URL.createObjectURL(input.file);
-        }
-      }
+    try {
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(input.file!);
+      });
+      finalFileUrl = base64Data;
+    } catch (e) {
+      console.warn('FileReader Base64 note:', e);
+      finalFileUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
     }
   }
 
-  if (!finalFileUrl || finalFileUrl.startsWith('blob:')) {
+  if (!finalFileUrl) {
     finalFileUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
   }
 
