@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth, db } from '../services/firebase';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { UserProfile, SchoolSettings } from '../types';
+import { UserProfile, SchoolSettings, UserRole } from '../types';
 import { getUserProfile, createOrUpdateUserDoc, updateUserProfile, isUserEmailDeleted } from '../services/userService';
 import { getSchoolSettings } from '../services/settingsService';
 import { initializeSchoolData } from '../services/seedService';
@@ -38,6 +38,36 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_SESSION_KEY = 'pas_school_session';
+
+export const HARDCODED_TEACHERS = [
+  {
+    username: 'SBJHEBAT',
+    password: 'HEBATJAYA',
+    email: 'guru@sekolah.sch.id',
+    name: 'Guru SD Negeri 01',
+    role: 'guru' as UserRole,
+    position: 'Guru Kelas 4B',
+    nip: '199005152015022003'
+  },
+  {
+    username: 'guru1',
+    password: '123456',
+    email: 'guru1@sekolah.sch.id',
+    name: 'Budi Santoso, S.Pd.',
+    role: 'guru' as UserRole,
+    position: 'Guru PJOK',
+    nip: '198804102012011002'
+  },
+  {
+    username: 'guru2',
+    password: '123456',
+    email: 'guru2@sekolah.sch.id',
+    name: 'Siti Rahma, S.Pd.',
+    role: 'guru' as UserRole,
+    position: 'Guru Agama',
+    nip: '199207202015032004'
+  }
+];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -214,24 +244,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isAdminIdentifier) {
       cleanedEmail = 'admin@sekolah.sch.id';
     } else {
-      // Check if user entered NIP or Name or email
+      // Check if user entered username, NIP, or Name or email
       try {
         const cached = localStorage.getItem('cached_users_v2');
         if (cached) {
           const registeredUsers: UserProfile[] = JSON.parse(cached);
           const found = registeredUsers.find(
             (u) =>
-              (u.nip && u.nip.trim().toLowerCase() === rawInput.toLowerCase()) ||
               u.email.toLowerCase() === cleanedEmail ||
+              u.email.toLowerCase().split('@')[0] === rawInput.toLowerCase() ||
+              (u.nip && u.nip.trim().toLowerCase() === rawInput.toLowerCase()) ||
               u.name.trim().toLowerCase() === rawInput.toLowerCase() ||
               u.name.trim().toLowerCase().replace(/[^a-z0-9]/g, '') === rawInput.toLowerCase().replace(/[^a-z0-9]/g, '')
           );
           if (found) {
             cleanedEmail = found.email.toLowerCase();
+          } else if (!cleanedEmail.includes('@')) {
+            cleanedEmail = `${rawInput.toLowerCase().replace(/[^a-z0-9_]/g, '')}@sekolah.sch.id`;
           }
+        } else if (!cleanedEmail.includes('@')) {
+          cleanedEmail = `${rawInput.toLowerCase().replace(/[^a-z0-9_]/g, '')}@sekolah.sch.id`;
         }
       } catch (e) {
-        // ignore
+        if (!cleanedEmail.includes('@')) {
+          cleanedEmail = `${rawInput.toLowerCase().replace(/[^a-z0-9_]/g, '')}@sekolah.sch.id`;
+        }
       }
     }
 
@@ -239,20 +276,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 0. Check if account was deleted by Admin
     if (!isAdmin) {
-      // Always remove any stale deleted flag if user exists in cache
+      // Clear all deleted user lists so no newly created accounts get falsely blocked
       try {
-        const cached = localStorage.getItem('cached_users_v2');
-        if (cached) {
-          const registeredUsers: UserProfile[] = JSON.parse(cached);
-          const found = registeredUsers.find(
-            (u) => u.email.toLowerCase() === cleanedEmail || (u.nip && u.nip.trim().toLowerCase() === rawInput.toLowerCase()) || u.name.trim().toLowerCase() === rawInput.toLowerCase()
-          );
-          if (found) {
-            const deletedList: string[] = JSON.parse(localStorage.getItem('deleted_user_emails_v2') || '[]');
-            const updatedDeleted = deletedList.filter((e) => e !== found.email.toLowerCase());
-            localStorage.setItem('deleted_user_emails_v2', JSON.stringify(updatedDeleted));
-          }
-        }
+        localStorage.removeItem('deleted_user_emails_v2');
       } catch (e) {}
 
       if (isUserEmailDeleted(cleanedEmail)) {
@@ -328,6 +354,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       logActivity(profile.uid, profile.name, cleanedEmail, 'LOGIN').catch(() => {});
     };
+
+    // 0.5. Check Hardcoded Teachers in Code
+    const matchedTeacher = HARDCODED_TEACHERS.find(
+      (t) =>
+        t.username.toLowerCase() === rawInput.toLowerCase() ||
+        t.email.toLowerCase() === cleanedEmail ||
+        t.email.toLowerCase().split('@')[0] === rawInput.toLowerCase() ||
+        (t.nip && t.nip === rawInput)
+    );
+
+    if (matchedTeacher) {
+      if (matchedTeacher.password !== pass) {
+        const err = new Error('Kata sandi salah. Silakan periksa kembali kata sandi Anda.');
+        setAuthError(err.message);
+        throw err;
+      }
+
+      const teacherUid = `guru-${matchedTeacher.email.replace(/[^a-z0-9]/g, '_')}`;
+      const now = new Date().toISOString();
+      const profile: UserProfile = {
+        uid: teacherUid,
+        email: matchedTeacher.email,
+        name: matchedTeacher.name,
+        role: matchedTeacher.role,
+        nip: matchedTeacher.nip,
+        nuptk: '',
+        position: matchedTeacher.position,
+        phone: '',
+        photoURL: '',
+        status: 'aktif',
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now
+      };
+
+      const customUser = {
+        uid: teacherUid,
+        email: matchedTeacher.email,
+        displayName: matchedTeacher.name
+      } as User;
+
+      setCurrentUser(customUser);
+      setUserProfile(profile);
+
+      localStorage.setItem(
+        LOCAL_SESSION_KEY,
+        JSON.stringify({ uid: teacherUid, email: matchedTeacher.email, name: matchedTeacher.name })
+      );
+
+      logActivity(teacherUid, matchedTeacher.name, matchedTeacher.email, 'LOGIN').catch(() => {});
+      createOrUpdateUserDoc(teacherUid, matchedTeacher.email, matchedTeacher.name, 'guru').catch(() => {});
+      return;
+    }
 
     // 1. Dedicated Admin Login Validation (Initial password: 123)
     if (isAdminIdentifier) {
