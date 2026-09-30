@@ -74,14 +74,7 @@ export const AdminDocumentList: React.FC = () => {
       );
     }
 
-    // Trigger download link
-    const a = document.createElement('a');
-    a.href = doc.fileUrl;
-    a.target = '_blank';
-    a.download = doc.fileName || doc.title;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    window.open(doc.fileUrl, '_blank');
 
     setToast({ message: `Mengunduh file: ${doc.title}`, type: 'success' });
     loadData(); // refresh download counts

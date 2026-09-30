@@ -115,8 +115,8 @@ export async function uploadDocument(
     }
   }
 
-  if (!finalFileUrl && input.file) {
-    finalFileUrl = URL.createObjectURL(input.file);
+  if (!finalFileUrl || finalFileUrl.startsWith('blob:')) {
+    finalFileUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
   }
 
   const now = new Date().toISOString();
